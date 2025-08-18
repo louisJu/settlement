@@ -479,87 +479,115 @@
     }
 
     async function exportPDF() {
-  const exportBtn = document.getElementById('pdf-export-btn');
-  const originalText = exportBtn.innerText;
-  exportBtn.innerText = '생성 중..';
-  exportBtn.disabled = true;
+        const exportBtn = document.getElementById('pdf-export-btn');
+        const originalText = exportBtn.innerText;
+        exportBtn.innerText = '생성 중..';
+        exportBtn.disabled = true;
 
-  const summaryMenu = document.getElementById('summary-menu');
-  const menuButtons = summaryMenu.querySelector('.flex.gap-2');
+        // 1. Create PDF-specific styles and inject them into the document's head.
+        const pdfStyles = `
+            <style id="pdf-styles">
+                /* Use a grid layout for the summary list to ensure perfect alignment */
+                #print-container #summaryList .flex.justify-between {
+                    display: grid;
+                    grid-template-columns: auto 1fr;
+                    gap: 1rem;
+                }
+                #print-container #summaryList .flex.justify-between span:last-child {
+                    text-align: right; /* Align amounts to the right */
+                }
+                /* Ensure long text in expense item details wraps correctly */
+                #print-container #expenseList .text-sm.text-gray-600 {
+                    word-break: break-word;
+                    white-space: normal;
+                }
+            </style>
+        `;
+        document.head.insertAdjacentHTML('beforeend', pdfStyles);
 
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = doc.internal.pageSize.getWidth() - 20; // 좌우 여백 10mm
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let yPos = 15; // Y축 시작 위치 (상단 여백 15mm)
+        // 2. Create an off-screen container for rendering.
+        const printContainer = document.createElement('div');
+        printContainer.id = 'print-container'; // Assign an ID for styling.
+        printContainer.style.position = 'absolute';
+        printContainer.style.left = '-9999px';
+        printContainer.style.width = '896px';
+        printContainer.style.backgroundColor = 'white';
+        printContainer.className = 'space-y-6 p-6';
 
-    menuButtons.style.visibility = 'hidden'; // PDF 생성 시 버튼 숨기기
+        // Clone the content cards.
+        const expenseCard = document.getElementById('expense-list-card').cloneNode(true);
+        const summaryCard = document.getElementById('summary-card').cloneNode(true);
 
-    // 단일 HTML 요소를 canvas로 변환하여 PDF에 추가하는 헬퍼 함수
-    const addElementToPdf = async (element) => {
-      // 요소가 보이지 않으면 (예: 지출 목록이 없을 때) 작업을 중단합니다.
-      if (element.offsetParent === null) return;
+        // Remove interactive elements from the clone.
+        const summaryMenuButtons = summaryCard.querySelector('#summary-menu .flex.gap-2');
+        if (summaryMenuButtons) {
+            summaryMenuButtons.remove();
+        }
 
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/png');
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        printContainer.appendChild(expenseCard);
+        printContainer.appendChild(summaryCard);
+        document.body.appendChild(printContainer);
 
-      // 현재 페이지에 요소가 들어갈 공간이 없는지 확인 (하단 여백 15mm 고려)
-      // 공간이 없으면 새 페이지를 추가하고 Y 위치를 초기화합니다.
-      if (yPos + imgHeight > pageHeight - 15) {
-        doc.addPage();
-        yPos = 15;
-      }
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const margin = 15;
+            const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
+            const pdfHeight = doc.internal.pageSize.getHeight();
 
-      // 계산된 위치에 요소 이미지를 추가합니다.
-      doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, imgHeight);
-      yPos += imgHeight + 4; // 다음 요소와의 간격(4mm)을 두고 Y 위치 업데이트
-    };
+            // 3. Render the styled, off-screen container using html2canvas.
+            const canvas = await html2canvas(printContainer, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                windowWidth: printContainer.scrollWidth,
+                windowHeight: printContainer.scrollHeight
+            });
 
-    // --- 1. 지출 목록 처리 ---
-    const expenseCardTitle = document.querySelector('#expense-list-card h2');
-    await addElementToPdf(expenseCardTitle); // "지출 목록" 제목부터 추가
+            // 4. Implement a robust "slicing" pagination logic.
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const pageImgHeight = (canvasWidth / pdfWidth) * (pdfHeight - margin * 2); // Calculate height of canvas slice for one PDF page.
 
-    const expenseItems = document.querySelectorAll('#expenseList > div');
-    // 각 지출 항목(div)을 순회하며 개별적으로 PDF에 추가
-    for (const item of expenseItems) {
-      await addElementToPdf(item);
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvasWidth;
+            pageCanvas.height = pageImgHeight;
+            const pageCtx = pageCanvas.getContext('2d', { willReadFrequently: true });
+
+            let y = 0; // The y-coordinate of the slice on the main canvas.
+            while (y < canvasHeight) {
+                // Add a new page for the second slice and onwards.
+                if (y > 0) {
+                    doc.addPage();
+                }
+                // Draw a slice of the main canvas onto the temporary page canvas.
+                pageCtx.fillStyle = 'white';
+                pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+                pageCtx.drawImage(canvas, 0, y, canvasWidth, pageImgHeight, 0, 0, canvasWidth, pageImgHeight);
+
+                const pageImgData = pageCanvas.toDataURL('image/png');
+                doc.addImage(pageImgData, 'PNG', margin, margin, pdfWidth, pdfHeight - margin * 2);
+
+                y += pageImgHeight; // Move to the next slice.
+            }
+
+            doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
+
+        } catch (error) {
+            console.error("PDF 생성 중 오류 발생:", error);
+            alert("PDF를 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.");
+        } finally {
+            // 5. Clean up by removing the temporary container and styles.
+            document.body.removeChild(printContainer);
+            const styles = document.getElementById('pdf-styles');
+            if (styles) {
+                styles.remove();
+            }
+            exportBtn.innerText = originalText;
+            exportBtn.disabled = false;
+        }
     }
-    // 지출 항목이 없을 때 표시되는 p 태그 처리
-    if (expenseItems.length === 0) {
-        const noExpenseText = document.querySelector('#expenseList > p');
-        if(noExpenseText) await addElementToPdf(noExpenseText);
-    }
 
-
-    // --- 2. 정산 결과 처리 ---
-    yPos += 5; // 지출 목록과 정산 결과 카드 사이에 추가 여백
-    const summaryCard = document.getElementById('summary-card');
-    // 정산 결과 카드는 하나의 단위로 처리
-    if (summaryCard) {
-      const canvas = await html2canvas(summaryCard, { scale: 2, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/png');
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      // 정산 카드 전체가 들어갈 공간이 없으면 새 페이지 추가
-      if (yPos + imgHeight > pageHeight - 15) {
-        doc.addPage();
-        yPos = 15;
-      }
-      doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, imgHeight);
-    }
-
-    doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
-  } catch (error) {
-    console.error("PDF 생성 중 오류 발생:", error);
-    alert("PDF를 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.");
-  } finally {
-    menuButtons.style.visibility = 'visible'; // 숨겼던 버튼 다시 표시
-    exportBtn.innerText = originalText;
-    exportBtn.disabled = false;
-  }
-}
 
     document.getElementById("personName").addEventListener("keypress", e => {
       if (e.key === "Enter") {
@@ -569,7 +597,7 @@
     });
     document.getElementById("expenseAmount").addEventListener("input", validateManualAmounts);
 
-    // 초기 렌더링
+    // Initial render
     loadState();
     renderPeople();
     renderExpenses();
