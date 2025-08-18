@@ -478,51 +478,87 @@
     }
 
     async function exportPDF() {
-      const exportBtn = document.getElementById('pdf-export-btn');
-      const originalText = exportBtn.innerText;
-      exportBtn.innerText = '생성 중..';
-      exportBtn.disabled = true;
+  const exportBtn = document.getElementById('pdf-export-btn');
+  const originalText = exportBtn.innerText;
+  exportBtn.innerText = '생성 중..';
+  exportBtn.disabled = true;
 
-      const summaryMenu = document.getElementById('summary-menu');
-      const menuButtons = summaryMenu.querySelector('.flex.gap-2');
+  const summaryMenu = document.getElementById('summary-menu');
+  const menuButtons = summaryMenu.querySelector('.flex.gap-2');
 
-      try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        let yPos = 15;
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = doc.internal.pageSize.getWidth() - 20; // 좌우 여백 10mm
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 15; // Y축 시작 위치 (상단 여백 15mm)
 
-        menuButtons.style.visibility = 'hidden';
+    menuButtons.style.visibility = 'hidden'; // PDF 생성 시 버튼 숨기기
 
-        const addImageToPdf = async (elementId) => {
-          const element = document.getElementById(elementId);
-          if (!element || element.clientHeight === 0) return;
-          const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
-          const imgData = canvas.toDataURL('image/png');
-          const pdfWidth = doc.internal.pageSize.getWidth() - 20;
-          const ratio = canvas.height / canvas.width;
-          const scaledHeight = pdfWidth * ratio;
+    // 단일 HTML 요소를 canvas로 변환하여 PDF에 추가하는 헬퍼 함수
+    const addElementToPdf = async (element) => {
+      // 요소가 보이지 않으면 (예: 지출 목록이 없을 때) 작업을 중단합니다.
+      if (element.offsetParent === null) return;
 
-          if (yPos + scaledHeight > doc.internal.pageSize.getHeight() - 15) {
-            doc.addPage();
-            yPos = 15;
-          }
-          doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, scaledHeight);
-          yPos += scaledHeight + 10;
-        };
+      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        await addImageToPdf('expense-list-card');
-        await addImageToPdf('summary-card');
-
-        doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
-      } catch (error) {
-        console.error("PDF 생성 중 오류 발생:", error);
-        alert("PDF를 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.");
-      } finally {
-        menuButtons.style.visibility = 'visible';
-        exportBtn.innerText = originalText;
-        exportBtn.disabled = false;
+      // 현재 페이지에 요소가 들어갈 공간이 없는지 확인 (하단 여백 15mm 고려)
+      // 공간이 없으면 새 페이지를 추가하고 Y 위치를 초기화합니다.
+      if (yPos + imgHeight > pageHeight - 15) {
+        doc.addPage();
+        yPos = 15;
       }
+
+      // 계산된 위치에 요소 이미지를 추가합니다.
+      doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, imgHeight);
+      yPos += imgHeight + 4; // 다음 요소와의 간격(4mm)을 두고 Y 위치 업데이트
+    };
+
+    // --- 1. 지출 목록 처리 ---
+    const expenseCardTitle = document.querySelector('#expense-list-card h2');
+    await addElementToPdf(expenseCardTitle); // "지출 목록" 제목부터 추가
+
+    const expenseItems = document.querySelectorAll('#expenseList > div');
+    // 각 지출 항목(div)을 순회하며 개별적으로 PDF에 추가
+    for (const item of expenseItems) {
+      await addElementToPdf(item);
     }
+    // 지출 항목이 없을 때 표시되는 p 태그 처리
+    if (expenseItems.length === 0) {
+        const noExpenseText = document.querySelector('#expenseList > p');
+        if(noExpenseText) await addElementToPdf(noExpenseText);
+    }
+
+
+    // --- 2. 정산 결과 처리 ---
+    yPos += 5; // 지출 목록과 정산 결과 카드 사이에 추가 여백
+    const summaryCard = document.getElementById('summary-card');
+    // 정산 결과 카드는 하나의 단위로 처리
+    if (summaryCard) {
+      const canvas = await html2canvas(summaryCard, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // 정산 카드 전체가 들어갈 공간이 없으면 새 페이지 추가
+      if (yPos + imgHeight > pageHeight - 15) {
+        doc.addPage();
+        yPos = 15;
+      }
+      doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, imgHeight);
+    }
+
+    doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
+  } catch (error) {
+    console.error("PDF 생성 중 오류 발생:", error);
+    alert("PDF를 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.");
+  } finally {
+    menuButtons.style.visibility = 'visible'; // 숨겼던 버튼 다시 표시
+    exportBtn.innerText = originalText;
+    exportBtn.disabled = false;
+  }
+}
 
     document.getElementById("personName").addEventListener("keypress", e => {
       if (e.key === "Enter") {
