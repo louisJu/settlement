@@ -8,11 +8,10 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#3b82f6"/>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    /* Tailwind CSS는 CDN으로 연결되어 별도 설정이 필요 없습니다. */
     .hidden { display: none; }
   </style>
 </head>
@@ -86,7 +85,7 @@
       <h2 class="text-lg font-semibold mb-4">지출 목록</h2>
       <div id="expenseList" class="space-y-3"></div>
     </div>
-    
+
     <div id="summary-card" class="bg-white p-6 rounded-2xl shadow-md space-y-6">
       <div id="summary-menu" class="flex justify-between items-center flex-wrap gap-2">
         <h2 class="text-lg font-semibold mb-4">정산 결과 🚀</h2>
@@ -162,7 +161,7 @@
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
     }
-    
+
     // 저장된 정산 목록을 화면에 렌더링합니다.
     function renderSavedSettlements() {
         const settlements = getSettlements();
@@ -221,7 +220,7 @@
             renderAll(); // 모든 UI 다시 그리기
         }
     }
-    
+
     // 특정 ID의 정산 내역을 삭제합니다.
     function deleteSettlement(id) {
         if (!confirm("정말로 이 정산 내역을 삭제하시겠습니까?")) return;
@@ -238,7 +237,7 @@
     function initializeApp() {
         showStartScreen();
     }
-    
+
     // 계산기 화면의 모든 UI 요소를 새로 그립니다.
     function renderAll() {
         renderPeople();
@@ -255,7 +254,7 @@
             renderAll();
         }
     }
-    
+
     // 기존 함수들은 이제 saveState() 대신 saveCurrentSettlement()를 호출하여
     // 현재 작업 중인 목록에만 변경사항을 저장합니다.
     function renderPeople() {
@@ -440,7 +439,7 @@
       updateSummary();
       saveCurrentSettlement();
     }
-    
+
     // 이 아래의 계산 및 내보내기 관련 함수들은 기존과 동일하게 작동합니다.
     // (updateSummary, renderTransactions, calculateTransactions, getBalances, generateContent, exportTXT, exportPDF)
     function updateSummary() {
@@ -615,7 +614,7 @@
       a.click();
       URL.revokeObjectURL(a.href);
     }
-    
+
     async function exportPDF() {
     const exportBtn = document.getElementById('pdf-export-btn');
     const originalText = exportBtn.innerText;
@@ -764,7 +763,7 @@
         exportBtn.disabled = false;
     }
 }
-    
+
     document.getElementById("personName").addEventListener("keypress", e => {
       if (e.key === "Enter") {
         e.preventDefault();
