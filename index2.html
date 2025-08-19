@@ -617,9 +617,153 @@
     }
     
     async function exportPDF() {
-      // PDF 내보내기 로직은 이전과 동일합니다.
-      // (내부 로직 생략)
+    const exportBtn = document.getElementById('pdf-export-btn');
+    const originalText = exportBtn.innerText;
+    exportBtn.innerText = '생성 중..';
+    exportBtn.disabled = true;
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const margin = 15;
+        const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let currentY = margin;
+
+        // 페이지 공간 확인 및 새 페이지 추가
+        const checkPageBreak = (requiredHeight) => {
+            if (currentY + requiredHeight > pageHeight - margin - 10) {
+                doc.addPage();
+                currentY = margin;
+                return true;
+            }
+            return false;
+        };
+
+        // 요소를 PDF에 추가하는 함수
+        const addElementToPDF = async (element) => {
+            if (!element || element.offsetHeight === 0) return;
+
+            const canvas = await html2canvas(element, {
+                scale: 1.5,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+            const maxHeight = pageHeight - margin * 2;
+
+            if (imgHeight > maxHeight) {
+                // 여러 페이지로 분할
+                const totalParts = Math.ceil(imgHeight / maxHeight);
+                const partHeight = maxHeight;
+                const canvasPartHeight = canvas.height / totalParts;
+
+                for (let i = 0; i < totalParts; i++) {
+                    if (i > 0) {
+                        doc.addPage();
+                        currentY = margin;
+                    } else {
+                        checkPageBreak(partHeight);
+                    }
+
+                    const partCanvas = document.createElement('canvas');
+                    const partCtx = partCanvas.getContext('2d');
+                    partCanvas.width = canvas.width;
+                    partCanvas.height = canvasPartHeight;
+
+                    partCtx.drawImage(
+                        canvas,
+                        0, i * canvasPartHeight, canvas.width, canvasPartHeight,
+                        0, 0, canvas.width, canvasPartHeight
+                    );
+
+                    const partImgData = partCanvas.toDataURL('image/png');
+                    doc.addImage(partImgData, 'PNG', margin, currentY, pdfWidth, partHeight);
+                    currentY += partHeight + 3;
+                }
+            } else {
+                // 한 페이지에 들어가는 경우
+                checkPageBreak(imgHeight);
+                doc.addImage(imgData, 'PNG', margin, currentY, pdfWidth, imgHeight);
+                currentY += imgHeight + 5;
+            }
+        };
+
+        // 임시 컨테이너
+        const printContainer = document.createElement('div');
+        printContainer.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 750px;
+            background: white;
+            padding: 20px;
+            z-index: -9999;
+            opacity: 0;
+        `;
+
+        const expenseCard = document.getElementById('expense-list-card').cloneNode(true);
+        const summaryCard = document.getElementById('summary-card').cloneNode(true);
+
+        // 버튼/셀렉트 제거
+        summaryCard.querySelectorAll('button, select').forEach(btn => btn.remove());
+
+        printContainer.appendChild(expenseCard);
+        printContainer.appendChild(summaryCard);
+        document.body.appendChild(printContainer);
+
+        // 1. '지출 목록'에 해당하는 요소들을 먼저 정의하고 PDF에 추가합니다.
+                const expenseElements = [
+                    printContainer.querySelector('#expense-list-card > h2'),
+                    ...printContainer.querySelectorAll('#expenseList > div')
+                ].filter(el => el);
+
+                for (const element of expenseElements) {
+                    await addElementToPDF(element);
+                }
+
+                // 2. '지출 목록' 내용이 하나라도 있었다면, 강제로 다음 페이지로 넘깁니다.
+                if (expenseElements.length > 1) { // 타이틀 외 실제 지출 내역이 1개 이상 있을 경우
+                    doc.addPage();
+                    currentY = margin; // Y 좌표를 새 페이지의 상단 여백으로 초기화합니다.
+                }
+
+                // 3. '정산 결과'에 해당하는 요소들을 새 페이지부터 이어서 추가합니다.
+                const individualStatusTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('개인별 정산 현황'));
+                const settlementMethodTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('정산 방법'));
+
+                const summaryElements = [
+                    printContainer.querySelector('#summary-menu'),
+                    printContainer.querySelector('#total-spending'),
+                    individualStatusTitle,
+                    ...printContainer.querySelectorAll('#summaryList > div'),
+                    settlementMethodTitle,
+                    ...printContainer.querySelectorAll('#transactionList > div')
+                ].filter(el => el);
+
+                for (const element of summaryElements) {
+                    await addElementToPDF(element);
+                }
+
+        doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
+
+    } catch (error) {
+        console.error("PDF 생성 오류:", error);
+        alert("PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+        // cleanup
+        const containers = document.querySelectorAll('[style*="z-index: -9999"]');
+        containers.forEach(container => {
+            if (container.parentNode) container.parentNode.removeChild(container);
+        });
+
+        exportBtn.innerText = originalText;
+        exportBtn.disabled = false;
     }
+}
     
     document.getElementById("personName").addEventListener("keypress", e => {
       if (e.key === "Enter") {
