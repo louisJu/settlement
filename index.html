@@ -577,26 +577,36 @@
         printContainer.appendChild(summaryCard);
         document.body.appendChild(printContainer);
 
-        // 페이지 나눔 처리를 위해 PDF에 추가할 요소들을 개별적으로 선택합니다.
+        // 1. '지출 목록'에 해당하는 요소들을 먼저 정의하고 PDF에 추가합니다.
+                const expenseElements = [
+                    printContainer.querySelector('#expense-list-card > h2'),
+                    ...printContainer.querySelectorAll('#expenseList > div')
+                ].filter(el => el);
+
+                for (const element of expenseElements) {
+                    await addElementToPDF(element);
+                }
+
+                // 2. '지출 목록' 내용이 하나라도 있었다면, 강제로 다음 페이지로 넘깁니다.
+                if (expenseElements.length > 1) { // 타이틀 외 실제 지출 내역이 1개 이상 있을 경우
+                    doc.addPage();
+                    currentY = margin; // Y 좌표를 새 페이지의 상단 여백으로 초기화합니다.
+                }
+
+                // 3. '정산 결과'에 해당하는 요소들을 새 페이지부터 이어서 추가합니다.
                 const individualStatusTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('개인별 정산 현황'));
                 const settlementMethodTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('정산 방법'));
 
-                const elementsToPrint = [
-                    // --- 지출 목록 카드 ---
-                    printContainer.querySelector('#expense-list-card > h2'),
-                    ...printContainer.querySelectorAll('#expenseList > div'),
-
-                    // --- 정산 결과 카드 (페이지 나눔을 위해 분리) ---
-                    printContainer.querySelector('#summary-menu'), // "정산 결과" 제목이 포함된 영역
+                const summaryElements = [
+                    printContainer.querySelector('#summary-menu'),
                     printContainer.querySelector('#total-spending'),
                     individualStatusTitle,
                     ...printContainer.querySelectorAll('#summaryList > div'),
                     settlementMethodTitle,
                     ...printContainer.querySelectorAll('#transactionList > div')
-                ].filter(el => el); // null인 요소를 배열에서 제거합니다.
+                ].filter(el => el);
 
-                // 각 요소를 순서대로 PDF에 추가합니다.
-                for (const element of elementsToPrint) {
+                for (const element of summaryElements) {
                     await addElementToPDF(element);
                 }
 
