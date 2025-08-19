@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>정산 계산기</title>
-  
+
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#3b82f6"/>
 
@@ -21,6 +21,11 @@
     <div class="bg-white p-6 rounded-2xl shadow-md text-center">
       <h1 class="text-2xl font-bold mb-4">🚀 정산 계산기</h1>
       <p class="text-gray-600 mb-6">새로운 정산을 시작하거나 기존 목록을 불러오세요.</p>
+
+      <button id="custom-install-btn" class="hidden w-full px-4 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition mb-3">
+  📲 앱으로 설치하기
+</button>
+
       <button onclick="createNewSettlement()" class="w-full px-4 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition">
         새로운 정산 작성하기
       </button>
@@ -786,6 +791,151 @@
     // --- 앱 시작 ---
     initializeApp();
 
+    let deferredPrompt; // 브라우저의 설치 신호(이벤트)를 저장할 변수
+    const installButton = document.getElementById('custom-install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // 브라우저의 기본 설치 안내창(미니 정보 표시줄)이 뜨지 않도록 막음
+      e.preventDefault();
+
+      // 나중에 사용하기 위해 신호를 저장함
+      deferredPrompt = e;
+
+      // 우리가 만든 '앱 설치' 버튼을 화면에 표시함
+      installButton.classList.remove('hidden');
+    });
+
+    installButton.addEventListener('click', async () => {
+  // 저장해 둔 신호(deferredPrompt)가 있는지 확인
+  if (deferredPrompt) {
+    // 브라우저의 공식 설치 창을 띄움
+    deferredPrompt.prompt();
+
+    // 사용자가 설치를 '수락'했는지 '거절'했는지 알 수 있음
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`사용자 선택: ${outcome}`);
+
+    // 신호는 한 번만 사용할 수 있으므로 변수를 초기화함
+    deferredPrompt = null;
+
+    // 설치가 완료되었거나 사용자가 거절했으므로 버튼을 다시 숨김
+    installButton.classList.add('hidden');
+  }
+});
+
+    // ==================================================================
+    // ▼▼▼▼▼▼▼▼▼▼▼▼▼ PWA 설치 유도 팝업 스크립트 (새로 추가) ▼▼▼▼▼▼▼▼▼▼▼▼▼
+    // ==================================================================
+
+    const installPopupOverlay = document.getElementById('install-popup-overlay');
+    const installPopupContent = document.getElementById('install-popup-content');
+    const installGuideText = document.getElementById('install-guide-text');
+    const installGuideIcon = document.getElementById('install-guide-icon');
+    const closeBtn = document.getElementById('close-popup-btn');
+    const dismissBtn = document.getElementById('dismiss-popup-btn');
+
+    // 팝업을 닫는 함수
+    function closeInstallPopup() {
+        installPopupContent.classList.remove('scale-100');
+        installPopupOverlay.classList.add('opacity-0');
+        setTimeout(() => {
+            installPopupOverlay.classList.add('hidden');
+            // 원래 상태로 되돌려놓기 (애니메이션을 위해)
+            installPopupContent.classList.add('scale-95');
+            installPopupOverlay.classList.remove('opacity-0');
+        }, 300); // 0.3초 애니메이션
+    }
+
+    // '다시 보지 않기' 버튼 클릭 시
+    dismissBtn.addEventListener('click', () => {
+        localStorage.setItem('installPromptDismissed', 'true');
+        closeInstallPopup();
+    });
+
+    // '이해했습니다' 또는 오버레이 클릭 시 팝업 닫기
+    closeBtn.addEventListener('click', closeInstallPopup);
+    installPopupOverlay.addEventListener('click', (e) => {
+        if (e.target === installPopupOverlay) {
+            closeInstallPopup();
+        }
+    });
+
+    // PWA 설치 안내를 보여주는 메인 함수
+    function showInstallPrompt() {
+        // 1. 이미 앱 모드(standalone)로 실행 중이면 함수 종료
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log("이미 앱으로 실행 중입니다.");
+            return;
+        }
+
+        // 2. 사용자가 '다시 보지 않기'를 선택했다면 함수 종료
+        if (localStorage.getItem('installPromptDismissed') === 'true') {
+            console.log("설치 안내를 거부한 사용자입니다.");
+            return;
+        }
+
+        const userAgent = navigator.userAgent.toLowerCase();
+        let guideText = '';
+        let guideIconSvg = '';
+
+        // 아이콘 SVG 정의
+        const pcIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25" /></svg>`;
+        const shareIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>`;
+        const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`;
+
+        // 3. OS 및 브라우저 감지하여 안내 문구 설정
+        if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
+            // iOS (아이폰, 아이패드)
+            guideText = "하단의 '공유' 버튼을 누른 후<br>'홈 화면에 추가'를 선택하세요.";
+            guideIconSvg = shareIcon;
+        } else if (userAgent.includes('android')) {
+            // 안드로이드
+            guideText = "오른쪽 위 '메뉴(⋮)'를 누른 후<br>'앱 설치'를 선택하세요.";
+            guideIconSvg = pcIcon;
+        } else if (userAgent.includes('chrome') || userAgent.includes('edg')) {
+            // 데스크탑 크롬, 엣지
+            guideText = "주소창 오른쪽의 '설치' 아이콘을<br>클릭하여 앱을 설치하세요.";
+            guideIconSvg = pcIcon;
+        } else {
+            // 그 외 지원하지 않는 환경이면 함수 종료
+            return;
+        }
+
+        // 4. 감지된 정보로 팝업 내용 채우고 보여주기
+        installGuideText.innerHTML = guideText;
+        installGuideIcon.innerHTML = guideIconSvg;
+
+        installPopupOverlay.classList.remove('hidden');
+        setTimeout(() => {
+          installPopupContent.classList.add('scale-100');
+        }, 100); // 약간의 딜레이 후 애니메이션 시작
+    }
+
+    // 페이지 로드 후 3초 뒤에 설치 안내 팝업 함수 실행
+    window.addEventListener('load', () => {
+        setTimeout(showInstallPrompt, 3000);
+    });
+
 </script>
+
+<div id="install-popup-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity">
+  <div id="install-popup-content" class="bg-white rounded-2xl shadow-xl p-6 m-4 max-w-sm w-full text-center transform scale-95 transition-transform">
+    <h3 class="text-xl font-bold mb-2">앱처럼 설치해서 사용하세요!</h3>
+    <p class="text-gray-600 mb-4">바탕화면에 '정산 계산기'를 추가하고<br>더 빠르고 편리하게 이용할 수 있습니다.</p>
+
+    <div id="install-guide" class="bg-gray-100 p-4 rounded-lg mb-4">
+      <div id="install-guide-icon" class="w-12 h-12 mx-auto mb-2 text-blue-500">
+        </div>
+      <p id="install-guide-text" class="font-semibold text-gray-700"></p>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <button id="close-popup-btn" class="w-full px-4 py-2 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition">이해했습니다</button>
+      <button id="dismiss-popup-btn" class="w-full text-sm text-gray-500 hover:text-gray-700">다시 보지 않기</button>
+    </div>
+  </div>
+</div>
+
+</body>
 </body>
 </html>
