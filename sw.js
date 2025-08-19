@@ -1,7 +1,7 @@
 const CACHE_NAME = 'settlement-calculator-cache-v1';
 const urlsToCache = [
-  '/settlement/',
-  '/settlement/index.html',
+  '/',
+  '/index.html',
   'https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
