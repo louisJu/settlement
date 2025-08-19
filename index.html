@@ -123,7 +123,6 @@
     </div>
   </div>
 
-  <!-- 설치 안내 팝업 -->
   <div id="install-popup-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity">
     <div id="install-popup-content" class="bg-white rounded-2xl shadow-xl p-6 m-4 max-w-sm w-full text-center transform scale-95 transition-transform">
       <h3 class="text-xl font-bold mb-2">앱처럼 설치해서 사용하세요!</h3>
@@ -336,12 +335,10 @@
       const amount = parseFloat(document.getElementById("expenseAmount").value);
       const paidBy = document.getElementById("paidBy").value;
       const splitType = document.querySelector('input[name="splitType"]:checked').value;
-
       if (!title || isNaN(amount) || amount <= 0 || !paidBy) {
         alert("항목, 0원 초과의 금액, 결제자를 모두 입력해주세요.");
         return;
       }
-
       const expenseData = { title, amount, paidBy, splitType };
       if (splitType === 'equal') {
         const involved = Array.from(document.querySelectorAll(".involved-checkbox:checked")).map(cb => cb.value);
@@ -373,7 +370,6 @@
       const note = document.getElementById("expenseNote").value.trim();
       if (note) expenseData.note = note;
       expenses.push(expenseData);
-
       document.getElementById("expenseTitle").value = "";
       document.getElementById("expenseAmount").value = "";
       document.getElementById("paidBy").value = "";
@@ -407,17 +403,7 @@
         if (exp.note) splitInfo += `<br><span class="text-xs text-gray-500">비고: ${exp.note}</span>`;
         const splitTypeLabel = exp.splitType === 'equal' ? '균등정산' : '수동정산';
         const splitTypeBadgeColor = exp.splitType === 'equal' ? 'bg-blue-500' : 'bg-green-500';
-        div.innerHTML = `
-          <div class="flex-1">
-            <div class="flex justify-between items-start mb-2">
-              <span class="font-semibold">${exp.title}</span>
-              <span class="px-2 py-1 text-xs text-white rounded-full ${splitTypeBadgeColor}">${splitTypeLabel}</span>
-            </div>
-            <div class="font-bold">${exp.amount.toLocaleString()}원 <span class="text-sm font-medium text-gray-600">(결제자: ${exp.paidBy})</span></div>
-            <div class="text-sm text-gray-600 mt-1">${splitInfo}</div>
-          </div>
-          <button onclick="removeExpense(${index})" class="px-3 py-1 bg-red-500 text-white rounded-xl hover:bg-red-600 ml-3 transition">삭제</button>
-        `;
+        div.innerHTML = `<div class="flex-1"><div class="flex justify-between items-start mb-2"><span class="font-semibold">${exp.title}</span><span class="px-2 py-1 text-xs text-white rounded-full ${splitTypeBadgeColor}">${splitTypeLabel}</span></div><div class="font-bold">${exp.amount.toLocaleString()}원 <span class="text-sm font-medium text-gray-600">(결제자: ${exp.paidBy})</span></div><div class="text-sm text-gray-600 mt-1">${splitInfo}</div></div><button onclick="removeExpense(${index})" class="px-3 py-1 bg-red-500 text-white rounded-xl hover:bg-red-600 ml-3 transition">삭제</button>`;
         container.appendChild(div);
       });
     }
@@ -473,14 +459,7 @@
         transactions.forEach(({ from, to, amount }) => {
             const div = document.createElement('div');
             div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-xl';
-            div.innerHTML = `
-                <span class="font-bold text-red-600">${from}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-                <span class="font-bold text-green-600">${to}</span>
-                <span class="font-semibold text-gray-800 bg-gray-200 px-3 py-1 rounded-full">${amount.toLocaleString()}원</span>
-            `;
+            div.innerHTML = `<span class="font-bold text-red-600">${from}</span><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg><span class="font-bold text-green-600">${to}</span><span class="font-semibold text-gray-800 bg-gray-200 px-3 py-1 rounded-full">${amount.toLocaleString()}원</span>`;
             transactionList.appendChild(div);
         });
     }
@@ -539,14 +518,7 @@
       const transactions = calculateTransactions(balances);
       const totalSpending = expenses.reduce((sum, exp) => sum + exp.amount, 0);
       const now = new Date();
-      let content = [
-        `정산 내역 (${now.toLocaleDateString('ko-KR')})`,
-        '='.repeat(50),
-        `👥 참여자: ${people.join(', ')}`,
-        `💰 총 지출: ${totalSpending.toLocaleString()}원`,
-        '',
-        '--- 📝 지출 목록 ---'
-      ];
+      let content = [ `정산 내역 (${now.toLocaleDateString('ko-KR')})`, '='.repeat(50), `👥 참여자: ${people.join(', ')}`, `💰 총 지출: ${totalSpending.toLocaleString()}원`, '', '--- 📝 지출 목록 ---' ];
       expenses.forEach((exp, index) => {
         content.push(`${index + 1}. ${exp.title} - ${exp.amount.toLocaleString()}원 (결제: ${exp.paidBy})`);
         if (exp.splitType === 'equal') {
@@ -569,9 +541,7 @@
       if (transactions.length === 0) {
         content.push('모든 정산이 완료되었습니다!');
       } else {
-        transactions.forEach(t => {
-          content.push(`${t.from} → ${t.to} : ${t.amount.toLocaleString()}원`);
-        });
+        transactions.forEach(t => { content.push(`${t.from} → ${t.to} : ${t.amount.toLocaleString()}원`); });
       }
       return content.join('\n');
     }
@@ -598,14 +568,7 @@
             const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
             const pageHeight = doc.internal.pageSize.getHeight();
             let currentY = margin;
-            const checkPageBreak = (requiredHeight) => {
-                if (currentY + requiredHeight > pageHeight - margin - 10) {
-                    doc.addPage();
-                    currentY = margin;
-                    return true;
-                }
-                return false;
-            };
+            const checkPageBreak = (requiredHeight) => { if (currentY + requiredHeight > pageHeight - margin - 10) { doc.addPage(); currentY = margin; return true; } return false; };
             const addElementToPDF = async (element) => {
                 if (!element || element.offsetHeight === 0) return;
                 const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', logging: false });
@@ -617,12 +580,7 @@
                     const partHeight = maxHeight;
                     const canvasPartHeight = canvas.height / totalParts;
                     for (let i = 0; i < totalParts; i++) {
-                        if (i > 0) {
-                            doc.addPage();
-                            currentY = margin;
-                        } else {
-                            checkPageBreak(partHeight);
-                        }
+                        if (i > 0) { doc.addPage(); currentY = margin; } else { checkPageBreak(partHeight); }
                         const partCanvas = document.createElement('canvas');
                         const partCtx = partCanvas.getContext('2d');
                         partCanvas.width = canvas.width;
@@ -665,12 +623,7 @@
         }
     }
 
-    document.getElementById("personName").addEventListener("keypress", e => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addPerson();
-      }
-    });
+    document.getElementById("personName").addEventListener("keypress", e => { if (e.key === "Enter") { e.preventDefault(); addPerson(); } });
     document.getElementById("expenseAmount").addEventListener("input", validateManualAmounts);
 
 </script>
