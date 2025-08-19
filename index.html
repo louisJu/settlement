@@ -626,6 +626,53 @@
     document.getElementById("personName").addEventListener("keypress", e => { if (e.key === "Enter") { e.preventDefault(); addPerson(); } });
     document.getElementById("expenseAmount").addEventListener("input", validateManualAmounts);
 
+  // -------------------------------
+// PWA 설치 관련 코드
+// -------------------------------
+let deferredPrompt;
+
+// Service Worker 등록
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log("✅ Service Worker 등록 완료"))
+    .catch(err => console.error("Service Worker 등록 실패:", err));
+}
+
+// beforeinstallprompt 이벤트 감지
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // 숨겨둔 설치 버튼과 팝업 노출
+  if (!localStorage.getItem("hideInstallPopup")) {
+    document.getElementById("custom-install-btn").classList.remove("hidden");
+    document.getElementById("install-popup-overlay").classList.remove("hidden");
+  }
+});
+
+// 설치 버튼 클릭 시
+document.getElementById("custom-install-btn").addEventListener("click", async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log("사용자 선택:", outcome);
+    deferredPrompt = null;
+    document.getElementById("install-popup-overlay").classList.add("hidden");
+  }
+});
+
+// 팝업 닫기
+document.getElementById("close-popup-btn").addEventListener("click", () => {
+  document.getElementById("install-popup-overlay").classList.add("hidden");
+});
+
+// 다시 보지 않기
+document.getElementById("dismiss-popup-btn").addEventListener("click", () => {
+  localStorage.setItem("hideInstallPopup", "true");
+  document.getElementById("install-popup-overlay").classList.add("hidden");
+});
+
+
 </script>
 
 </body>
