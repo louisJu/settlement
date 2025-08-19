@@ -64,7 +64,7 @@
 
     <div id="summary-card" class="bg-white p-6 rounded-2xl shadow-md space-y-6">
       <div id="summary-menu" class="flex justify-between items-center flex-wrap gap-2">
-        <h2 class="text-xl font-bold">정산 결과 🚀</h2>
+        <h2 class="text-lg font-semibold mb-4">정산 결과 🚀</h2>
         <div class="flex gap-2">
           <select id="roundingOption" onchange="updateSummary()" class="px-3 py-1 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition">
             <option value="none">원단위 그대로</option>
@@ -479,114 +479,144 @@
     }
 
     async function exportPDF() {
-        const exportBtn = document.getElementById('pdf-export-btn');
-        const originalText = exportBtn.innerText;
-        exportBtn.innerText = '생성 중..';
-        exportBtn.disabled = true;
+    const exportBtn = document.getElementById('pdf-export-btn');
+    const originalText = exportBtn.innerText;
+    exportBtn.innerText = '생성 중..';
+    exportBtn.disabled = true;
 
-        // 1. Create PDF-specific styles and inject them into the document's head.
-        const pdfStyles = `
-            <style id="pdf-styles">
-                /* Use a grid layout for the summary list to ensure perfect alignment */
-                #print-container #summaryList .flex.justify-between {
-                    display: grid;
-                    grid-template-columns: auto 1fr;
-                    gap: 1rem;
-                }
-                #print-container #summaryList .flex.justify-between span:last-child {
-                    text-align: right; /* Align amounts to the right */
-                }
-                /* Ensure long text in expense item details wraps correctly */
-                #print-container #expenseList .text-sm.text-gray-600 {
-                    word-break: break-word;
-                    white-space: normal;
-                }
-            </style>
-        `;
-        document.head.insertAdjacentHTML('beforeend', pdfStyles);
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const margin = 15;
+        const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let currentY = margin;
 
-        // 2. Create an off-screen container for rendering.
+        // 페이지 공간 확인 및 새 페이지 추가
+        const checkPageBreak = (requiredHeight) => {
+            if (currentY + requiredHeight > pageHeight - margin - 10) {
+                doc.addPage();
+                currentY = margin;
+                return true;
+            }
+            return false;
+        };
+
+        // 요소를 PDF에 추가하는 함수
+        const addElementToPDF = async (element) => {
+            if (!element || element.offsetHeight === 0) return;
+
+            const canvas = await html2canvas(element, {
+                scale: 1.5,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+            const maxHeight = pageHeight - margin * 2;
+
+            if (imgHeight > maxHeight) {
+                // 여러 페이지로 분할
+                const totalParts = Math.ceil(imgHeight / maxHeight);
+                const partHeight = maxHeight;
+                const canvasPartHeight = canvas.height / totalParts;
+
+                for (let i = 0; i < totalParts; i++) {
+                    if (i > 0) {
+                        doc.addPage();
+                        currentY = margin;
+                    } else {
+                        checkPageBreak(partHeight);
+                    }
+
+                    const partCanvas = document.createElement('canvas');
+                    const partCtx = partCanvas.getContext('2d');
+                    partCanvas.width = canvas.width;
+                    partCanvas.height = canvasPartHeight;
+
+                    partCtx.drawImage(
+                        canvas,
+                        0, i * canvasPartHeight, canvas.width, canvasPartHeight,
+                        0, 0, canvas.width, canvasPartHeight
+                    );
+
+                    const partImgData = partCanvas.toDataURL('image/png');
+                    doc.addImage(partImgData, 'PNG', margin, currentY, pdfWidth, partHeight);
+                    currentY += partHeight + 3;
+                }
+            } else {
+                // 한 페이지에 들어가는 경우
+                checkPageBreak(imgHeight);
+                doc.addImage(imgData, 'PNG', margin, currentY, pdfWidth, imgHeight);
+                currentY += imgHeight + 5;
+            }
+        };
+
+        // 임시 컨테이너
         const printContainer = document.createElement('div');
-        printContainer.id = 'print-container'; // Assign an ID for styling.
-        printContainer.style.position = 'absolute';
-        printContainer.style.left = '-9999px';
-        printContainer.style.width = '896px';
-        printContainer.style.backgroundColor = 'white';
-        printContainer.className = 'space-y-6 p-6';
+        printContainer.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 750px;
+            background: white;
+            padding: 20px;
+            z-index: -9999;
+            opacity: 0;
+        `;
 
-        // Clone the content cards.
         const expenseCard = document.getElementById('expense-list-card').cloneNode(true);
         const summaryCard = document.getElementById('summary-card').cloneNode(true);
 
-        // Remove interactive elements from the clone.
-        const summaryMenuButtons = summaryCard.querySelector('#summary-menu .flex.gap-2');
-        if (summaryMenuButtons) {
-            summaryMenuButtons.remove();
-        }
+        // 버튼/셀렉트 제거
+        summaryCard.querySelectorAll('button, select').forEach(btn => btn.remove());
 
         printContainer.appendChild(expenseCard);
         printContainer.appendChild(summaryCard);
         document.body.appendChild(printContainer);
 
-        try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'mm', 'a4');
-            const margin = 15;
-            const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
-            const pdfHeight = doc.internal.pageSize.getHeight();
+        // 페이지 나눔 처리를 위해 PDF에 추가할 요소들을 개별적으로 선택합니다.
+                const individualStatusTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('개인별 정산 현황'));
+                const settlementMethodTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('정산 방법'));
 
-            // 3. Render the styled, off-screen container using html2canvas.
-            const canvas = await html2canvas(printContainer, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                windowWidth: printContainer.scrollWidth,
-                windowHeight: printContainer.scrollHeight
-            });
+                const elementsToPrint = [
+                    // --- 지출 목록 카드 ---
+                    printContainer.querySelector('#expense-list-card > h2'),
+                    ...printContainer.querySelectorAll('#expenseList > div'),
 
-            // 4. Implement a robust "slicing" pagination logic.
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const pageImgHeight = (canvasWidth / pdfWidth) * (pdfHeight - margin * 2); // Calculate height of canvas slice for one PDF page.
+                    // --- 정산 결과 카드 (페이지 나눔을 위해 분리) ---
+                    printContainer.querySelector('#summary-menu'), // "정산 결과" 제목이 포함된 영역
+                    printContainer.querySelector('#total-spending'),
+                    individualStatusTitle,
+                    ...printContainer.querySelectorAll('#summaryList > div'),
+                    settlementMethodTitle,
+                    ...printContainer.querySelectorAll('#transactionList > div')
+                ].filter(el => el); // null인 요소를 배열에서 제거합니다.
 
-            const pageCanvas = document.createElement('canvas');
-            pageCanvas.width = canvasWidth;
-            pageCanvas.height = pageImgHeight;
-            const pageCtx = pageCanvas.getContext('2d', { willReadFrequently: true });
-
-            let y = 0; // The y-coordinate of the slice on the main canvas.
-            while (y < canvasHeight) {
-                // Add a new page for the second slice and onwards.
-                if (y > 0) {
-                    doc.addPage();
+                // 각 요소를 순서대로 PDF에 추가합니다.
+                for (const element of elementsToPrint) {
+                    await addElementToPDF(element);
                 }
-                // Draw a slice of the main canvas onto the temporary page canvas.
-                pageCtx.fillStyle = 'white';
-                pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-                pageCtx.drawImage(canvas, 0, y, canvasWidth, pageImgHeight, 0, 0, canvasWidth, pageImgHeight);
 
-                const pageImgData = pageCanvas.toDataURL('image/png');
-                doc.addImage(pageImgData, 'PNG', margin, margin, pdfWidth, pdfHeight - margin * 2);
+        doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
 
-                y += pageImgHeight; // Move to the next slice.
-            }
+    } catch (error) {
+        console.error("PDF 생성 오류:", error);
+        alert("PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+        // cleanup
+        const containers = document.querySelectorAll('[style*="z-index: -9999"]');
+        containers.forEach(container => {
+            if (container.parentNode) container.parentNode.removeChild(container);
+        });
 
-            doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
-
-        } catch (error) {
-            console.error("PDF 생성 중 오류 발생:", error);
-            alert("PDF를 생성하는 중에 오류가 발생했습니다. 다시 시도해주세요.");
-        } finally {
-            // 5. Clean up by removing the temporary container and styles.
-            document.body.removeChild(printContainer);
-            const styles = document.getElementById('pdf-styles');
-            if (styles) {
-                styles.remove();
-            }
-            exportBtn.innerText = originalText;
-            exportBtn.disabled = false;
-        }
+        exportBtn.innerText = originalText;
+        exportBtn.disabled = false;
     }
+}
+
 
 
     document.getElementById("personName").addEventListener("keypress", e => {
