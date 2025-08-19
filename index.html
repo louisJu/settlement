@@ -23,8 +23,8 @@
       <p class="text-gray-600 mb-6">새로운 정산을 시작하거나 기존 목록을 불러오세요.</p>
 
       <button id="custom-install-btn" class="hidden w-full px-4 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition mb-3">
-  📲 앱으로 설치하기
-</button>
+        📲 앱으로 설치하기
+      </button>
 
       <button onclick="createNewSettlement()" class="w-full px-4 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition">
         새로운 정산 작성하기
@@ -32,8 +32,7 @@
     </div>
     <div class="bg-white p-6 rounded-2xl shadow-md">
       <h2 class="text-lg font-semibold mb-4">저장된 정산 목록</h2>
-      <div id="saved-settlements-list" class="space-y-3">
-        </div>
+      <div id="saved-settlements-list" class="space-y-3"></div>
     </div>
   </div>
 
@@ -41,7 +40,8 @@
     <div class="bg-white p-4 rounded-2xl shadow-md flex items-center justify-between">
        <button onclick="showStartScreen()" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-xl hover:bg-gray-300 transition">&lt; 목록으로</button>
        <h1 id="settlement-title" class="text-xl font-bold text-center flex-1">정산</h1>
-       <div class="w-24"></div> </div>
+       <div class="w-24"></div>
+    </div>
 
     <div class="bg-white p-6 rounded-2xl shadow-md">
       <div class="flex justify-between items-center mb-4">
@@ -123,24 +123,36 @@
     </div>
   </div>
 
+  <div id="install-popup-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity">
+    <div id="install-popup-content" class="bg-white rounded-2xl shadow-xl p-6 m-4 max-w-sm w-full text-center transform scale-95 transition-transform">
+      <h3 class="text-xl font-bold mb-2">앱처럼 설치해서 사용하세요!</h3>
+      <p class="text-gray-600 mb-4">바탕화면에 '정산 계산기'를 추가하고<br>더 빠르고 편리하게 이용할 수 있습니다.</p>
+      <div id="install-guide" class="bg-gray-100 p-4 rounded-lg mb-4">
+        <div id="install-guide-icon" class="w-12 h-12 mx-auto mb-2 text-blue-500"></div>
+        <p id="install-guide-text" class="font-semibold text-gray-700"></p>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="close-popup-btn" class="w-full px-4 py-2 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition">이해했습니다</button>
+        <button id="dismiss-popup-btn" class="w-full text-sm text-gray-500 hover:text-gray-700">다시 보지 않기</button>
+      </div>
+    </div>
+  </div>
+
 <script>
     // --- 상태 관리 변수 ---
     let people = [];
     let expenses = [];
-    let currentSettlementId = null; // 현재 작업 중인 정산 ID
+    let currentSettlementId = null;
 
-    // --- 새로운 데이터 관리 함수들 ---
-    // 로컬 스토리지에서 모든 정산 목록을 가져옵니다.
+    // --- 데이터 관리 및 앱 핵심 기능 함수들 ---
     function getSettlements() {
       return JSON.parse(localStorage.getItem('settlements') || '[]');
     }
 
-    // 정산 목록 전체를 로컬 스토리지에 저장합니다.
     function saveSettlements(settlements) {
       localStorage.setItem('settlements', JSON.stringify(settlements));
     }
 
-    // 현재 작업 중인 정산 내역(참여자, 지출)을 저장합니다.
     function saveCurrentSettlement() {
         if (!currentSettlementId) return;
         const settlements = getSettlements();
@@ -152,22 +164,18 @@
         }
     }
 
-    // --- 새로운 화면 전환 및 UI 렌더링 함수들 ---
-    // 시작 화면을 보여줍니다.
     function showStartScreen() {
         document.getElementById('start-screen').classList.remove('hidden');
         document.getElementById('main-app').classList.add('hidden');
-        renderSavedSettlements(); // 저장된 목록을 다시 그림
-        currentSettlementId = null; // 현재 작업 ID 초기화
+        renderSavedSettlements();
+        currentSettlementId = null;
     }
 
-    // 메인 계산기 앱 화면을 보여줍니다.
     function showMainApp() {
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
     }
 
-    // 저장된 정산 목록을 화면에 렌더링합니다.
     function renderSavedSettlements() {
         const settlements = getSettlements();
         const container = document.getElementById('saved-settlements-list');
@@ -176,7 +184,7 @@
             container.innerHTML = `<p class="text-center text-gray-500">저장된 내역이 없습니다.</p>`;
             return;
         }
-        settlements.sort((a, b) => b.id - a.id); // 최신순으로 정렬
+        settlements.sort((a, b) => b.id - a.id);
         settlements.forEach(s => {
             const date = new Date(s.id).toLocaleDateString('ko-KR');
             const div = document.createElement('div');
@@ -195,24 +203,21 @@
         });
     }
 
-    // 새로운 정산 만들기를 시작합니다.
     function createNewSettlement() {
         const name = prompt("새로운 정산의 이름을 입력해주세요:", `정산 ${new Date().toLocaleDateString()}`);
         if (!name || !name.trim()) return;
-
         const settlements = getSettlements();
         const newSettlement = {
-            id: Date.now(), // 현재 시간을 고유 ID로 사용
+            id: Date.now(),
             name: name.trim(),
             people: [],
             expenses: []
         };
         settlements.push(newSettlement);
         saveSettlements(settlements);
-        loadSettlement(newSettlement.id); // 생성 후 바로 불러오기
+        loadSettlement(newSettlement.id);
     }
 
-    // 특정 ID의 정산 내역을 불러옵니다.
     function loadSettlement(id) {
         const settlements = getSettlements();
         const settlement = settlements.find(s => s.id === id);
@@ -220,83 +225,62 @@
             currentSettlementId = settlement.id;
             people = settlement.people || [];
             expenses = settlement.expenses || [];
-            document.getElementById('settlement-title').innerText = settlement.name; // 제목 설정
+            document.getElementById('settlement-title').innerText = settlement.name;
             showMainApp();
-            renderAll(); // 모든 UI 다시 그리기
+            renderAll();
         }
     }
 
-    // 특정 ID의 정산 내역을 삭제합니다.
     function deleteSettlement(id) {
         if (!confirm("정말로 이 정산 내역을 삭제하시겠습니까?")) return;
         let settlements = getSettlements();
         settlements = settlements.filter(s => s.id !== id);
         saveSettlements(settlements);
-        renderSavedSettlements(); // 목록 새로고침
+        renderSavedSettlements();
     }
 
-
-    // --- 기존 기능 함수들 (수정됨) ---
-
-    // 앱을 처음 시작할 때 호출되는 함수입니다.
     function initializeApp() {
         showStartScreen();
     }
 
-    // 계산기 화면의 모든 UI 요소를 새로 그립니다.
     function renderAll() {
         renderPeople();
         renderExpenses();
         updateSummary();
     }
 
-    // 현재 작업 중인 정산의 모든 데이터를 초기화합니다.
     function resetAllData() {
         if(confirm('정말로 모든 참여자와 지출 내역을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
             people = [];
             expenses = [];
-            saveCurrentSettlement(); // 변경사항 저장
+            saveCurrentSettlement();
             renderAll();
         }
     }
 
-    // 기존 함수들은 이제 saveState() 대신 saveCurrentSettlement()를 호출하여
-    // 현재 작업 중인 목록에만 변경사항을 저장합니다.
     function renderPeople() {
         const personList = document.getElementById("personList");
         const paidBy = document.getElementById("paidBy");
         const involvedContainer = document.getElementById("involvedPeopleContainer");
         const manualContainer = document.getElementById("manualAmountContainer");
-
         personList.innerHTML = "";
         paidBy.innerHTML = '<option value="">결제자 선택</option>';
         involvedContainer.innerHTML = "";
         manualContainer.innerHTML = "";
-
         people.forEach((person, index) => {
             const badge = document.createElement("div");
             badge.className = "flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full";
-            badge.innerHTML = `
-                <span>${person}</span>
-                <button onclick="removePerson(${index})" class="text-red-500 hover:text-red-700 font-bold">x</button>
-            `;
+            badge.innerHTML = `<span>${person}</span><button onclick="removePerson(${index})" class="text-red-500 hover:text-red-700 font-bold">x</button>`;
             personList.appendChild(badge);
-
             const opt1 = new Option(person, person);
             paidBy.add(opt1);
-
             const checkbox = document.createElement("label");
             checkbox.className = "flex items-center gap-2 px-3 py-1 bg-gray-200 rounded-xl cursor-pointer text-gray-700";
             checkbox.innerHTML = `<input type="checkbox" class="involved-checkbox" value="${person}" checked> ${person}`;
             involvedContainer.appendChild(checkbox);
-
             const manualInput = document.createElement("div");
             manualInput.className = "flex items-center gap-2";
-            manualInput.innerHTML = `
-                <label class="w-20 text-sm font-medium">${person}:</label>
-                <input type="number" class="manual-amount flex-1 rounded-xl border px-2 py-1"
-                       data-person="${person}" placeholder="0" oninput="validateManualAmounts()">
-                <span class="text-xs text-gray-500">원</span>`;
+            manualInput.innerHTML = `<label class="w-20 text-sm font-medium">${person}:</label><input type="number" class="manual-amount flex-1 rounded-xl border px-2 py-1" data-person="${person}" placeholder="0" oninput="validateManualAmounts()"><span class="text-xs text-gray-500">원</span>`;
             manualContainer.appendChild(manualInput);
         });
     }
@@ -383,7 +367,6 @@
           alert("최소 한 명의 정산 금액을 입력해주세요.");
           return;
         }
-
         expenseData.manualAmounts = manualAmounts;
       }
       const note = document.getElementById("expenseNote").value.trim();
@@ -445,8 +428,6 @@
       saveCurrentSettlement();
     }
 
-    // 이 아래의 계산 및 내보내기 관련 함수들은 기존과 동일하게 작동합니다.
-    // (updateSummary, renderTransactions, calculateTransactions, getBalances, generateContent, exportTXT, exportPDF)
     function updateSummary() {
       const balances = getBalances();
       const summaryList = document.getElementById("summaryList");
@@ -457,10 +438,8 @@
         document.getElementById('transactionList').innerHTML = '';
         return;
       }
-
       const totalSpending = expenses.reduce((sum, exp) => sum + exp.amount, 0);
       document.getElementById('totalAmount').innerText = `₩ ${totalSpending.toLocaleString()}`;
-
       people.forEach(person => {
         const li = document.createElement("div");
         li.className = "flex justify-between items-center p-3 rounded-xl";
@@ -479,7 +458,6 @@
         li.innerHTML = `<span class="font-medium">${person}</span> ${amountText}`;
         summaryList.appendChild(li);
       });
-
       renderTransactions(balances);
     }
 
@@ -487,12 +465,10 @@
         const transactionList = document.getElementById("transactionList");
         transactionList.innerHTML = '';
         const transactions = calculateTransactions(balances);
-
         if (transactions.length === 0) {
             transactionList.innerHTML = `<p class="text-center text-green-600 font-semibold p-4 bg-green-50 rounded-xl">모든 정산이 완료되었습니다! 🎉</p>`;
             return;
         }
-
         transactions.forEach(({ from, to, amount }) => {
             const div = document.createElement('div');
             div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-xl';
@@ -511,34 +487,23 @@
     function calculateTransactions(balances) {
         const creditors = [];
         const debtors = [];
-
         Object.entries(balances).forEach(([person, amount]) => {
             if (amount > 0.01) creditors.push({ person, amount });
             else if (amount < -0.01) debtors.push({ person, amount: -amount });
         });
-
         creditors.sort((a, b) => b.amount - a.amount);
         debtors.sort((a, b) => b.amount - a.amount);
-
         const transactions = [];
         let i = 0, j = 0;
-
         while (i < debtors.length && j < creditors.length) {
             const debtor = debtors[i];
             const creditor = creditors[j];
             const amountToTransfer = Math.min(debtor.amount, creditor.amount);
-
             if (amountToTransfer > 0.01) {
-              transactions.push({
-                  from: debtor.person,
-                  to: creditor.person,
-                  amount: Math.round(amountToTransfer) // 최종 송금액은 반올림 처리
-              });
+              transactions.push({ from: debtor.person, to: creditor.person, amount: Math.round(amountToTransfer) });
             }
-
             debtor.amount -= amountToTransfer;
             creditor.amount -= amountToTransfer;
-
             if (debtor.amount < 0.01) i++;
             if (creditor.amount < 0.01) j++;
         }
@@ -563,7 +528,7 @@
         if (roundingOption === "0") balances[person] = Math.round(amount);
         else if (roundingOption === "10") balances[person] = Math.round(amount / 10) * 10;
         else if (roundingOption === "100") balances[person] = Math.round(amount / 100) * 100;
-        else balances[person] = Math.round(amount * 100) / 100; // 원단위는 소수점 두자리까지 유지
+        else balances[person] = Math.round(amount * 100) / 100;
       });
       return balances;
     }
@@ -621,153 +586,83 @@
     }
 
     async function exportPDF() {
-    const exportBtn = document.getElementById('pdf-export-btn');
-    const originalText = exportBtn.innerText;
-    exportBtn.innerText = '생성 중..';
-    exportBtn.disabled = true;
-
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        const margin = 15;
-        const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
-        const pageHeight = doc.internal.pageSize.getHeight();
-        let currentY = margin;
-
-        // 페이지 공간 확인 및 새 페이지 추가
-        const checkPageBreak = (requiredHeight) => {
-            if (currentY + requiredHeight > pageHeight - margin - 10) {
-                doc.addPage();
-                currentY = margin;
-                return true;
-            }
-            return false;
-        };
-
-        // 요소를 PDF에 추가하는 함수
-        const addElementToPDF = async (element) => {
-            if (!element || element.offsetHeight === 0) return;
-
-            const canvas = await html2canvas(element, {
-                scale: 1.5,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-            const maxHeight = pageHeight - margin * 2;
-
-            if (imgHeight > maxHeight) {
-                // 여러 페이지로 분할
-                const totalParts = Math.ceil(imgHeight / maxHeight);
-                const partHeight = maxHeight;
-                const canvasPartHeight = canvas.height / totalParts;
-
-                for (let i = 0; i < totalParts; i++) {
-                    if (i > 0) {
-                        doc.addPage();
-                        currentY = margin;
-                    } else {
-                        checkPageBreak(partHeight);
-                    }
-
-                    const partCanvas = document.createElement('canvas');
-                    const partCtx = partCanvas.getContext('2d');
-                    partCanvas.width = canvas.width;
-                    partCanvas.height = canvasPartHeight;
-
-                    partCtx.drawImage(
-                        canvas,
-                        0, i * canvasPartHeight, canvas.width, canvasPartHeight,
-                        0, 0, canvas.width, canvasPartHeight
-                    );
-
-                    const partImgData = partCanvas.toDataURL('image/png');
-                    doc.addImage(partImgData, 'PNG', margin, currentY, pdfWidth, partHeight);
-                    currentY += partHeight + 3;
-                }
-            } else {
-                // 한 페이지에 들어가는 경우
-                checkPageBreak(imgHeight);
-                doc.addImage(imgData, 'PNG', margin, currentY, pdfWidth, imgHeight);
-                currentY += imgHeight + 5;
-            }
-        };
-
-        // 임시 컨테이너
-        const printContainer = document.createElement('div');
-        printContainer.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 750px;
-            background: white;
-            padding: 20px;
-            z-index: -9999;
-            opacity: 0;
-        `;
-
-        const expenseCard = document.getElementById('expense-list-card').cloneNode(true);
-        const summaryCard = document.getElementById('summary-card').cloneNode(true);
-
-        // 버튼/셀렉트 제거
-        summaryCard.querySelectorAll('button, select').forEach(btn => btn.remove());
-
-        printContainer.appendChild(expenseCard);
-        printContainer.appendChild(summaryCard);
-        document.body.appendChild(printContainer);
-
-        // 1. '지출 목록'에 해당하는 요소들을 먼저 정의하고 PDF에 추가합니다.
-                const expenseElements = [
-                    printContainer.querySelector('#expense-list-card > h2'),
-                    ...printContainer.querySelectorAll('#expenseList > div')
-                ].filter(el => el);
-
-                for (const element of expenseElements) {
-                    await addElementToPDF(element);
-                }
-
-                // 2. '지출 목록' 내용이 하나라도 있었다면, 강제로 다음 페이지로 넘깁니다.
-                if (expenseElements.length > 1) { // 타이틀 외 실제 지출 내역이 1개 이상 있을 경우
+        const exportBtn = document.getElementById('pdf-export-btn');
+        const originalText = exportBtn.innerText;
+        exportBtn.innerText = '생성 중..';
+        exportBtn.disabled = true;
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const margin = 15;
+            const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
+            const pageHeight = doc.internal.pageSize.getHeight();
+            let currentY = margin;
+            const checkPageBreak = (requiredHeight) => {
+                if (currentY + requiredHeight > pageHeight - margin - 10) {
                     doc.addPage();
-                    currentY = margin; // Y 좌표를 새 페이지의 상단 여백으로 초기화합니다.
+                    currentY = margin;
+                    return true;
                 }
-
-                // 3. '정산 결과'에 해당하는 요소들을 새 페이지부터 이어서 추가합니다.
-                const individualStatusTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('개인별 정산 현황'));
-                const settlementMethodTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('정산 방법'));
-
-                const summaryElements = [
-                    printContainer.querySelector('#summary-menu'),
-                    printContainer.querySelector('#total-spending'),
-                    individualStatusTitle,
-                    ...printContainer.querySelectorAll('#summaryList > div'),
-                    settlementMethodTitle,
-                    ...printContainer.querySelectorAll('#transactionList > div')
-                ].filter(el => el);
-
-                for (const element of summaryElements) {
-                    await addElementToPDF(element);
+                return false;
+            };
+            const addElementToPDF = async (element) => {
+                if (!element || element.offsetHeight === 0) return;
+                const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', logging: false });
+                const imgData = canvas.toDataURL('image/png');
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const maxHeight = pageHeight - margin * 2;
+                if (imgHeight > maxHeight) {
+                    const totalParts = Math.ceil(imgHeight / maxHeight);
+                    const partHeight = maxHeight;
+                    const canvasPartHeight = canvas.height / totalParts;
+                    for (let i = 0; i < totalParts; i++) {
+                        if (i > 0) {
+                            doc.addPage();
+                            currentY = margin;
+                        } else {
+                            checkPageBreak(partHeight);
+                        }
+                        const partCanvas = document.createElement('canvas');
+                        const partCtx = partCanvas.getContext('2d');
+                        partCanvas.width = canvas.width;
+                        partCanvas.height = canvasPartHeight;
+                        partCtx.drawImage(canvas, 0, i * canvasPartHeight, canvas.width, canvasPartHeight, 0, 0, canvas.width, canvasPartHeight);
+                        const partImgData = partCanvas.toDataURL('image/png');
+                        doc.addImage(partImgData, 'PNG', margin, currentY, pdfWidth, partHeight);
+                        currentY += partHeight + 3;
+                    }
+                } else {
+                    checkPageBreak(imgHeight);
+                    doc.addImage(imgData, 'PNG', margin, currentY, pdfWidth, imgHeight);
+                    currentY += imgHeight + 5;
                 }
-
-        doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
-
-    } catch (error) {
-        console.error("PDF 생성 오류:", error);
-        alert("PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
-    } finally {
-        // cleanup
-        const containers = document.querySelectorAll('[style*="z-index: -9999"]');
-        containers.forEach(container => {
-            if (container.parentNode) container.parentNode.removeChild(container);
-        });
-
-        exportBtn.innerText = originalText;
-        exportBtn.disabled = false;
+            };
+            const printContainer = document.createElement('div');
+            printContainer.style.cssText = `position: fixed; top: 0; left: 0; width: 750px; background: white; padding: 20px; z-index: -9999; opacity: 0;`;
+            const expenseCard = document.getElementById('expense-list-card').cloneNode(true);
+            const summaryCard = document.getElementById('summary-card').cloneNode(true);
+            summaryCard.querySelectorAll('button, select').forEach(btn => btn.remove());
+            printContainer.appendChild(expenseCard);
+            printContainer.appendChild(summaryCard);
+            document.body.appendChild(printContainer);
+            const expenseElements = [printContainer.querySelector('#expense-list-card > h2'), ...printContainer.querySelectorAll('#expenseList > div')].filter(el => el);
+            for (const element of expenseElements) { await addElementToPDF(element); }
+            if (expenseElements.length > 1) { doc.addPage(); currentY = margin; }
+            const individualStatusTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('개인별 정산 현황'));
+            const settlementMethodTitle = Array.from(printContainer.querySelectorAll('#summary-card h3')).find(h => h.textContent.includes('정산 방법'));
+            const summaryElements = [printContainer.querySelector('#summary-menu'), printContainer.querySelector('#total-spending'), individualStatusTitle, ...printContainer.querySelectorAll('#summaryList > div'), settlementMethodTitle, ...printContainer.querySelectorAll('#transactionList > div')].filter(el => el);
+            for (const element of summaryElements) { await addElementToPDF(element); }
+            doc.save(`정산내역_${new Date().toISOString().slice(0,10)}.pdf`);
+        } catch (error) {
+            console.error("PDF 생성 오류:", error);
+            alert("PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
+        } finally {
+            const containers = document.querySelectorAll('[style*="z-index: -9999"]');
+            containers.forEach(container => { if (container.parentNode) container.parentNode.removeChild(container); });
+            exportBtn.innerText = originalText;
+            exportBtn.disabled = false;
+        }
     }
-}
 
     document.getElementById("personName").addEventListener("keypress", e => {
       if (e.key === "Enter") {
@@ -777,165 +672,7 @@
     });
     document.getElementById("expenseAmount").addEventListener("input", validateManualAmounts);
 
-    // --- PWA 서비스 워커 등록 ---
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').then(registration => {
-                console.log('서비스 워커 등록 성공: ', registration.scope);
-            }, err => {
-                console.log('서비스 워커 등록 실패: ', err);
-            });
-        });
-    }
-
-    // --- 앱 시작 ---
-    initializeApp();
-
-    let deferredPrompt; // 브라우저의 설치 신호(이벤트)를 저장할 변수
-    const installButton = document.getElementById('custom-install-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // 브라우저의 기본 설치 안내창(미니 정보 표시줄)이 뜨지 않도록 막음
-      e.preventDefault();
-
-      // 나중에 사용하기 위해 신호를 저장함
-      deferredPrompt = e;
-
-      // 우리가 만든 '앱 설치' 버튼을 화면에 표시함
-      installButton.classList.remove('hidden');
-    });
-
-    installButton.addEventListener('click', async () => {
-  // 저장해 둔 신호(deferredPrompt)가 있는지 확인
-  if (deferredPrompt) {
-    // 브라우저의 공식 설치 창을 띄움
-    deferredPrompt.prompt();
-
-    // 사용자가 설치를 '수락'했는지 '거절'했는지 알 수 있음
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`사용자 선택: ${outcome}`);
-
-    // 신호는 한 번만 사용할 수 있으므로 변수를 초기화함
-    deferredPrompt = null;
-
-    // 설치가 완료되었거나 사용자가 거절했으므로 버튼을 다시 숨김
-    installButton.classList.add('hidden');
-  }
-});
-
-    // ==================================================================
-    // ▼▼▼▼▼▼▼▼▼▼▼▼▼ PWA 설치 유도 팝업 스크립트 (새로 추가) ▼▼▼▼▼▼▼▼▼▼▼▼▼
-    // ==================================================================
-
-    const installPopupOverlay = document.getElementById('install-popup-overlay');
-    const installPopupContent = document.getElementById('install-popup-content');
-    const installGuideText = document.getElementById('install-guide-text');
-    const installGuideIcon = document.getElementById('install-guide-icon');
-    const closeBtn = document.getElementById('close-popup-btn');
-    const dismissBtn = document.getElementById('dismiss-popup-btn');
-
-    // 팝업을 닫는 함수
-    function closeInstallPopup() {
-        installPopupContent.classList.remove('scale-100');
-        installPopupOverlay.classList.add('opacity-0');
-        setTimeout(() => {
-            installPopupOverlay.classList.add('hidden');
-            // 원래 상태로 되돌려놓기 (애니메이션을 위해)
-            installPopupContent.classList.add('scale-95');
-            installPopupOverlay.classList.remove('opacity-0');
-        }, 300); // 0.3초 애니메이션
-    }
-
-    // '다시 보지 않기' 버튼 클릭 시
-    dismissBtn.addEventListener('click', () => {
-        localStorage.setItem('installPromptDismissed', 'true');
-        closeInstallPopup();
-    });
-
-    // '이해했습니다' 또는 오버레이 클릭 시 팝업 닫기
-    closeBtn.addEventListener('click', closeInstallPopup);
-    installPopupOverlay.addEventListener('click', (e) => {
-        if (e.target === installPopupOverlay) {
-            closeInstallPopup();
-        }
-    });
-
-    // PWA 설치 안내를 보여주는 메인 함수
-    function showInstallPrompt() {
-        // 1. 이미 앱 모드(standalone)로 실행 중이면 함수 종료
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            console.log("이미 앱으로 실행 중입니다.");
-            return;
-        }
-
-        // 2. 사용자가 '다시 보지 않기'를 선택했다면 함수 종료
-        if (localStorage.getItem('installPromptDismissed') === 'true') {
-            console.log("설치 안내를 거부한 사용자입니다.");
-            return;
-        }
-
-        const userAgent = navigator.userAgent.toLowerCase();
-        let guideText = '';
-        let guideIconSvg = '';
-
-        // 아이콘 SVG 정의
-        const pcIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25" /></svg>`;
-        const shareIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>`;
-        const addIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`;
-
-        // 3. OS 및 브라우저 감지하여 안내 문구 설정
-        if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
-            // iOS (아이폰, 아이패드)
-            guideText = "하단의 '공유' 버튼을 누른 후<br>'홈 화면에 추가'를 선택하세요.";
-            guideIconSvg = shareIcon;
-        } else if (userAgent.includes('android')) {
-            // 안드로이드
-            guideText = "오른쪽 위 '메뉴(⋮)'를 누른 후<br>'앱 설치'를 선택하세요.";
-            guideIconSvg = pcIcon;
-        } else if (userAgent.includes('chrome') || userAgent.includes('edg')) {
-            // 데스크탑 크롬, 엣지
-            guideText = "주소창 오른쪽의 '설치' 아이콘을<br>클릭하여 앱을 설치하세요.";
-            guideIconSvg = pcIcon;
-        } else {
-            // 그 외 지원하지 않는 환경이면 함수 종료
-            return;
-        }
-
-        // 4. 감지된 정보로 팝업 내용 채우고 보여주기
-        installGuideText.innerHTML = guideText;
-        installGuideIcon.innerHTML = guideIconSvg;
-
-        installPopupOverlay.classList.remove('hidden');
-        setTimeout(() => {
-          installPopupContent.classList.add('scale-100');
-        }, 100); // 약간의 딜레이 후 애니메이션 시작
-    }
-
-    // 페이지 로드 후 3초 뒤에 설치 안내 팝업 함수 실행
-    window.addEventListener('load', () => {
-        setTimeout(showInstallPrompt, 3000);
-    });
-
 </script>
 
-<div id="install-popup-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity">
-  <div id="install-popup-content" class="bg-white rounded-2xl shadow-xl p-6 m-4 max-w-sm w-full text-center transform scale-95 transition-transform">
-    <h3 class="text-xl font-bold mb-2">앱처럼 설치해서 사용하세요!</h3>
-    <p class="text-gray-600 mb-4">바탕화면에 '정산 계산기'를 추가하고<br>더 빠르고 편리하게 이용할 수 있습니다.</p>
-
-    <div id="install-guide" class="bg-gray-100 p-4 rounded-lg mb-4">
-      <div id="install-guide-icon" class="w-12 h-12 mx-auto mb-2 text-blue-500">
-        </div>
-      <p id="install-guide-text" class="font-semibold text-gray-700"></p>
-    </div>
-
-    <div class="flex flex-col gap-2">
-      <button id="close-popup-btn" class="w-full px-4 py-2 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition">이해했습니다</button>
-      <button id="dismiss-popup-btn" class="w-full text-sm text-gray-500 hover:text-gray-700">다시 보지 않기</button>
-    </div>
-  </div>
-</div>
-
-</body>
 </body>
 </html>
