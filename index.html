@@ -282,7 +282,7 @@
             involvedContainer.appendChild(checkbox);
             const manualInput = document.createElement("div");
             manualInput.className = "flex items-center gap-2";
-            manualInput.innerHTML = `<label class="w-20 text-sm font-medium">${person}:</label><input type="number" class="manual-amount flex-1 rounded-xl border px-2 py-1" data-person="${person}" placeholder="0" oninput="validateManualAmounts()"><span class="text-xs text-gray-500">원</span>`;
+            manualInput.innerHTML = `<label class="w-20 text-sm font-medium">${person}:</label><input type="number" class="manual-amount flex-1 rounded-xl border px-2 py-1" data-person="${person}" placeholder="0" oninput="recalculateManualAmounts(this)"><span class="text-xs text-gray-500">원</span>`;
             manualContainer.appendChild(manualInput);
         });
     }
@@ -333,6 +333,47 @@
         validateManualAmounts(); // 금액이 자동 분배된 후 유효성 검사를 다시 실행합니다.
     }
 
+    // 사용자가 수동 금액을 수정할 때마다 나머지 금액을 재분배하는 함수
+    function recalculateManualAmounts(editedInput) {
+        // 수정된 입력 필드에 '수정됨' 상태를 표시합니다.
+        if (editedInput) {
+            editedInput.setAttribute('data-edited', 'true');
+        }
+
+        const totalAmount = parseFloat(document.getElementById("expenseAmount").value) || 0;
+        const manualInputs = Array.from(document.querySelectorAll(".manual-amount"));
+
+        let fixedAmount = 0;
+        const uneditedInputs = [];
+
+        // 수정된 값(고정액)과 수정되지 않은 입력 필드를 분리합니다.
+        manualInputs.forEach(input => {
+            if (input.getAttribute('data-edited') === 'true') {
+                fixedAmount += parseFloat(input.value) || 0;
+            } else {
+                uneditedInputs.push(input);
+            }
+        });
+
+        const remainingAmount = totalAmount - fixedAmount;
+        const numUnedited = uneditedInputs.length;
+
+        // 수정되지 않은 필드에 나머지 금액을 1/n로 분배합니다.
+        if (numUnedited > 0) {
+            const baseAmount = Math.floor(remainingAmount / numUnedited);
+            const remainder = remainingAmount % numUnedited;
+
+            uneditedInputs.forEach((input, index) => {
+                let personAmount = baseAmount;
+                if (index === numUnedited - 1) { // 마지막 사람에게 나머지 할당
+                    personAmount += remainder;
+                }
+                input.value = personAmount;
+            });
+        }
+
+        validateManualAmounts(); // 최종적으로 금액 합계 유효성 검사
+    }
 
 
     function toggleSplitType() {
@@ -341,7 +382,12 @@
         document.getElementById('manualSplitContainer').classList.toggle('hidden', !isManual);
 
         if (isManual) {
-            autoFillManualAmounts();
+            // 모든 입력 필드의 '수정됨' 상태를 초기화합니다.
+            document.querySelectorAll(".manual-amount").forEach(input => {
+                input.removeAttribute('data-edited');
+            });
+            // 재계산 함수를 호출하여 1/n을 먼저 채웁니다. (인자 없이 호출)
+            recalculateManualAmounts();
         }
     }
 
@@ -769,7 +815,11 @@
     document.getElementById("expenseAmount").addEventListener("input", () => {
         const isManual = document.querySelector('input[name="splitType"]:checked').value === 'manual';
         if (isManual) {
-            autoFillManualAmounts();
+            // 금액이 바뀌면 처음부터 다시 계산해야 하므로 '수정됨' 상태를 모두 제거합니다.
+            document.querySelectorAll(".manual-amount").forEach(input => {
+                input.removeAttribute('data-edited');
+            });
+            recalculateManualAmounts(); // 재계산 함수 호출
         } else {
             validateManualAmounts();
         }
