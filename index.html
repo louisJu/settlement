@@ -104,6 +104,7 @@
           </select>
           <button onclick="exportTXT()" class="px-3 py-1 bg-gray-500 text-white rounded-xl hover:bg-gray-600 text-sm transition">TXT</button>
           <button id="pdf-export-btn" onclick="exportPDF()" class="px-3 py-1 bg-purple-500 text-white rounded-xl hover:bg-purple-600 text-sm transition">PDF</button>
+          <button onclick="exportImage()" class="px-3 py-1 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 text-sm transition">IMG</button>
         </div>
       </div>
 
@@ -307,11 +308,41 @@
       updateSummary();
       saveCurrentSettlement();
     }
+    function autoFillManualAmounts() {
+        const totalAmount = parseFloat(document.getElementById("expenseAmount").value) || 0;
+        const manualInputs = document.querySelectorAll(".manual-amount");
+        const numPeople = manualInputs.length;
+
+        if (totalAmount > 0 && numPeople > 0) {
+            const baseAmount = Math.floor(totalAmount / numPeople);
+            const remainder = totalAmount % numPeople;
+
+            manualInputs.forEach((input, index) => {
+                let personAmount = baseAmount;
+                // 마지막 사람에게 나머지 금액을 더해줍니다.
+                if (index === numPeople - 1) {
+                    personAmount += remainder;
+                }
+                input.value = personAmount;
+            });
+        } else {
+            manualInputs.forEach(input => {
+                input.value = "";
+            });
+        }
+        validateManualAmounts(); // 금액이 자동 분배된 후 유효성 검사를 다시 실행합니다.
+    }
+
+
 
     function toggleSplitType() {
-      const isManual = document.querySelector('input[name="splitType"]:checked').value === 'manual';
-      document.getElementById('equalSplitContainer').classList.toggle('hidden', isManual);
-      document.getElementById('manualSplitContainer').classList.toggle('hidden', !isManual);
+        const isManual = document.querySelector('input[name="splitType"]:checked').value === 'manual';
+        document.getElementById('equalSplitContainer').classList.toggle('hidden', isManual);
+        document.getElementById('manualSplitContainer').classList.toggle('hidden', !isManual);
+
+        if (isManual) {
+            autoFillManualAmounts();
+        }
     }
 
     function validateManualAmounts() {
@@ -384,29 +415,47 @@
     }
 
     function renderExpenses() {
-      const container = document.getElementById("expenseList");
-      container.innerHTML = "";
-      if (expenses.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500">추가된 지출 내역이 없습니다.</p>`;
-        return;
-      }
-      expenses.forEach((exp, index) => {
-        const colors = ["bg-purple-50 border-purple-200", "bg-green-50 border-green-200", "bg-yellow-50 border-yellow-200", "bg-pink-50 border-pink-200", "bg-blue-50 border-blue-200"];
-        const div = document.createElement("div");
-        div.className = `p-4 rounded-2xl border-2 flex justify-between items-center ${colors[index % colors.length]}`;
-        let splitInfo = "";
-        if (exp.splitType === 'equal') {
-          splitInfo = `정산 대상: ${exp.involved.join(", ")}`;
-        } else {
-          const amounts = Object.entries(exp.manualAmounts).map(([p, a]) => `${p}: ${a.toLocaleString()}원`).join(", ");
-          splitInfo = `정산 금액: ${amounts}`;
+        const container = document.getElementById("expenseList");
+        container.innerHTML = "";
+        if (expenses.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500">추가된 지출 내역이 없습니다.</p>`;
+            return;
         }
-        if (exp.note) splitInfo += `<br><span class="text-xs text-gray-500">비고: ${exp.note}</span>`;
-        const splitTypeLabel = exp.splitType === 'equal' ? '균등정산' : '수동정산';
-        const splitTypeBadgeColor = exp.splitType === 'equal' ? 'bg-blue-500' : 'bg-green-500';
-        div.innerHTML = `<div class="flex-1"><div class="flex justify-between items-start mb-2"><span class="font-semibold">${exp.title}</span><span class="px-2 py-1 text-xs text-white rounded-full ${splitTypeBadgeColor}">${splitTypeLabel}</span></div><div class="font-bold">${exp.amount.toLocaleString()}원 <span class="text-sm font-medium text-gray-600">(결제자: ${exp.paidBy})</span></div><div class="text-sm text-gray-600 mt-1">${splitInfo}</div></div><button onclick="removeExpense(${index})" class="px-3 py-1 bg-red-500 text-white rounded-xl hover:bg-red-600 ml-3 transition">삭제</button>`;
-        container.appendChild(div);
-      });
+        expenses.forEach((exp, index) => {
+            const colors = ["bg-purple-50 border-purple-200", "bg-green-50 border-green-200", "bg-yellow-50 border-yellow-200", "bg-pink-50 border-pink-200", "bg-blue-50 border-blue-200"];
+            const div = document.createElement("div");
+            div.className = `p-4 rounded-2xl border-2 flex justify-between items-start ${colors[index % colors.length]}`;
+
+            let splitInfo = "";
+            if (exp.splitType === 'equal') {
+                // 균등 정산 시, 각 참여자의 부담액을 계산하여 표시합니다.
+                const amountPerPerson = Math.round(exp.amount / exp.involved.length);
+                splitInfo = exp.involved.map(person => `<i class="font-semibold">${person}</i> ${amountPerPerson.toLocaleString()}원`).join(", ");
+
+            } else {
+                // 수동 정산 시, 각 참여자 이름에 이탤릭체를 적용합니다.
+                splitInfo = Object.entries(exp.manualAmounts).map(([person, amount]) => `<i class="font-semibold">${person}</i> ${amount.toLocaleString()}원`).join(", ");
+            }
+
+            if (exp.note) {
+                splitInfo += `<br><span class="text-xs text-gray-500 mt-1 inline-block">비고: ${exp.note}</span>`;
+            }
+
+            const splitTypeLabel = exp.splitType === 'equal' ? '균등' : '수동';
+            const splitTypeBadgeColor = exp.splitType === 'equal' ? 'bg-blue-500' : 'bg-green-500';
+
+            div.innerHTML = `
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-0.5 text-xs font-semibold text-white rounded-full ${splitTypeBadgeColor}">${splitTypeLabel}</span>
+              <span class="font-semibold">${exp.title} - ${exp.amount.toLocaleString()}원 (결제: ${exp.paidBy})</span>
+            </div>
+            <div class="text-sm text-gray-600 pl-1">${splitInfo}</div>
+          </div>
+          <button onclick="removeExpense(${index})" class="px-3 py-1 bg-red-500 text-white rounded-xl hover:bg-red-600 ml-3 transition">삭제</button>
+        `;
+            container.appendChild(div);
+        });
     }
 
     function removeExpense(index) {
@@ -624,8 +673,107 @@
         }
     }
 
+    // 👇 여기에 새로운 함수를 추가하세요!
+    async function exportImage() {
+        const settleTitle = document.getElementById('settlement-title').innerText || '정산';
+        const now = new Date();
+        const dateString = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+
+        const balances = getBalances();
+        const transactions = calculateTransactions(balances);
+
+        // 1. 이미지를 생성하기 위한 임시 컨테이너를 만듭니다.
+        const container = document.createElement('div');
+
+        // [수정된 부분] opacity: 0 대신 left: -9999px 로 요소를 화면 밖으로 이동시킵니다.
+        container.style.cssText = `position: absolute; top: 0; left: -9999px; width: 600px; background-color: #f9fafb; padding: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;`;
+
+        let finalSettlementHtml = '';
+        if (transactions.length === 0) {
+            finalSettlementHtml = `<div style="text-align: center; color: #16a34a; font-weight: 600; padding: 1rem; background-color: #f0fdf4; border-radius: 0.75rem;">모든 정산이 완료되었습니다! 🎉</div>`;
+        } else {
+            transactions.forEach(({ from, to, amount }) => {
+                finalSettlementHtml += `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background-color: #f9fafb; border-radius: 0.75rem; margin-bottom: 0.75rem;">
+              <span style="font-weight: 700; color: #dc2626;">${from}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" style="height: 1.25rem; width: 1.25rem; color: #6b7280; flex-shrink: 0;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              <span style="font-weight: 700; color: #16a34a;">${to}</span>
+              <span style="font-weight: 600; color: #1f2937; background-color: #e5e7eb; padding: 0.25rem 0.75rem; border-radius: 9999px; white-space: nowrap;">${amount.toLocaleString()}원</span>
+            </div>
+          `;
+            });
+        }
+
+        let htmlContent = `
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 25px;">
+          <h1 style="text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 8px;">${settleTitle} 내역서</h1>
+          <p style="text-align: center; font-size: 14px; color: #6b7280; margin-bottom: 25px;">${dateString} 기준</p>
+
+          <div style="border-top: 2px dashed #e5e7eb; padding-top: 20px;">
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">📈 지출 요약</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f3f4f6; padding: 15px; border-radius: 8px;">
+              <span style="font-size: 16px; color: #4b5563;">총 지출 금액</span>
+              <span style="font-size: 20px; font-weight: 700; white-space: nowrap;">${document.getElementById('totalAmount').innerText}</span>
+            </div>
+            <div style="margin-top: 10px;">
+              <span style="font-size: 16px; color: #4b5563;">참여자 (${people.length}명)</span>
+              <p style="font-size: 16px; font-weight: 500; margin-top: 5px; color: #1f2937;">${people.join(', ')}</p>
+            </div>
+          </div>
+
+          <div style="border-top: 2px dashed #e5e7eb; padding-top: 20px; margin-top: 25px;">
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 15px;">📋 상세 지출 내역</h2>
+            <div style="font-size: 15px; line-height: 1.8;">`;
+
+        expenses.forEach(exp => {
+            htmlContent += `<div style="padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
+                        <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                          <span>${exp.title}</span>
+                          <span style="white-space: nowrap; padding-left: 10px;">${exp.amount.toLocaleString()}원</span>
+                        </div>
+                        <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">결제: ${exp.paidBy}</div>
+                      </div>`;
+        });
+
+        htmlContent += `</div></div>
+          <div style="border-top: 2px dashed #e5e7eb; padding-top: 20px; margin-top: 25px;">
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 15px;">✅ 최종 정산</h2>
+            ${finalSettlementHtml}
+          </div>
+        </div>
+      `;
+
+        container.innerHTML = htmlContent;
+        document.body.appendChild(container);
+
+        // 2. html2canvas를 사용하여 컨테이너를 이미지로 변환합니다.
+        try {
+            const canvas = await html2canvas(container, {
+                scale: 2,
+                useCORS: true // CORS 문제 방지를 위해 옵션 추가
+            });
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/jpeg', 0.95);
+            a.download = `${settleTitle}_정산내역.jpg`;
+            a.click();
+        } catch (error) {
+            console.error("이미지 생성 오류:", error);
+            alert("이미지 생성 중 오류가 발생했습니다.");
+        } finally {
+            // 3. 임시 컨테이너를 제거합니다.
+            document.body.removeChild(container);
+        }
+    }
+
     document.getElementById("personName").addEventListener("keypress", e => { if (e.key === "Enter") { e.preventDefault(); addPerson(); } });
-    document.getElementById("expenseAmount").addEventListener("input", validateManualAmounts);
+    document.getElementById("expenseAmount").addEventListener("input", () => {
+        const isManual = document.querySelector('input[name="splitType"]:checked').value === 'manual';
+        if (isManual) {
+            autoFillManualAmounts();
+        } else {
+            validateManualAmounts();
+        }
+    });
 
    initializeApp();
   // -------------------------------
