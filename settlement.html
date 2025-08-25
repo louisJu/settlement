@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>N빵 정산기 - 정산</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .hidden { display: none; }
+        .tooltip-container { position: relative; display: inline-flex; align-items: center; }
+        .tooltip-icon { cursor: pointer; margin-left: 8px; font-weight: bold; color: #9ca3af; border: 1px solid #d1d5db; border-radius: 9999px; width: 20px; height: 20px; display: inline-flex; justify-content: center; align-items: center; font-size: 12px; }
+        .tooltip-text { visibility: hidden; width: 200px; background-color: #374151; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 12px; font-weight: normal;}
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<div id="main-app">
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto p-4 flex justify-between items-center">
+            <h1 id="settlement-title" class="text-xl font-bold">정산</h1>
+            <a href="index.html" class="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-300 transition">홈으로 돌아가기</a>
+        </div>
+    </header>
+    <main class="max-w-4xl mx-auto p-4 mt-6 space-y-6">
+        <div class="bg-white p-6 rounded-2xl shadow-md">
+            <div class="flex justify-between items-center mb-4">
+                <div class="tooltip-container">
+                    <h2 class="text-lg font-semibold">참여자 관리</h2>
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip-text">정산에 참여한 사람들의 이름을 추가하거나 삭제하는 곳입니다.</span>
+                </div>
+                <button onclick="resetAllData()" class="px-3 py-1 bg-red-500 text-white text-sm rounded-xl hover:bg-red-600 transition">전체 초기화</button>
+            </div>
+            <div class="flex gap-2 mb-3">
+                <input id="personName" type="text" placeholder="이름 입력" class="flex-1 rounded-xl border px-3 py-2 focus:ring-2 focus:ring-blue-500 transition" />
+                <button onclick="addPerson()" class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition">추가</button>
+            </div>
+            <div id="personList" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-md">
+            <div class="flex justify-between items-center mb-4">
+                <div class="tooltip-container">
+                    <h2 class="text-lg font-semibold">지출 추가</h2>
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip-text">각 지출 항목의 내용, 금액, 결제자를 입력하고 정산 방식을 선택하세요.</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="expenseTitle" type="text" placeholder="항목" class="rounded-xl border px-3 py-2 focus:ring-2 focus:ring-blue-500 transition" />
+                <input id="expenseAmount" type="number" placeholder="금액" class="rounded-xl border px-3 py-2 focus:ring-2 focus:ring-blue-500 transition" />
+                <select id="paidBy" class="rounded-xl border px-3 py-2 focus:ring-2 focus:ring-blue-500 transition">
+                    <option value="">결제자 선택</option>
+                </select>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="splitType" value="equal" checked onchange="toggleSplitType()"><span>균등 분할</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="splitType" value="manual" onchange="toggleSplitType()"><span>수동 입력</span></label>
+                </div>
+            </div>
+            <div id="equalSplitContainer" class="mt-3">
+                <span class="font-semibold">정산 대상자:</span>
+                <div id="involvedPeopleContainer" class="flex flex-wrap gap-2 mt-2"></div>
+            </div>
+            <div id="manualSplitContainer" class="mt-3 hidden">
+                <span class="font-semibold">개별 정산 금액:</span>
+                <div id="manualAmountContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2"></div>
+                <div id="amountValidation" class="mt-2 text-sm"></div>
+            </div>
+            <div class="mt-3">
+                <label class="block text-sm font-medium mb-1">비고 (선택사항):</label>
+                <input id="expenseNote" type="text" placeholder="비고 입력" class="w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-blue-500 transition" />
+            </div>
+            <button onclick="addExpense()" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 w-full transition">지출 추가</button>
+        </div>
+
+        <div id="expense-list-card" class="bg-white p-6 rounded-2xl shadow-md">
+            <h2 class="text-lg font-semibold mb-4">지출 목록</h2>
+            <div id="expenseList" class="space-y-3"></div>
+        </div>
+
+        <div id="summary-card" class="bg-white p-6 rounded-2xl shadow-md space-y-6">
+            <div id="summary-menu" class="flex justify-between items-center flex-wrap gap-2">
+                <h2 class="text-lg font-semibold">정산 결과 🚀</h2>
+                <div class="flex gap-2">
+                    <select id="roundingOption" onchange="updateSummary()" class="px-3 py-1 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="none">원단위 그대로</option>
+                        <option value="0">소수점 제거</option>
+                        <option value="10">10원 단위 반올림</option>
+                        <option value="100">100원 단위 반올림</option>
+                    </select>
+                    <button onclick="exportTXT()" class="px-3 py-1 bg-gray-500 text-white rounded-xl hover:bg-gray-600 text-sm transition">TXT</button>
+                    <button id="pdf-export-btn" onclick="exportPDF()" class="px-3 py-1 bg-purple-500 text-white rounded-xl hover:bg-purple-600 text-sm transition">PDF</button>
+                    <button onclick="exportImage()" class="px-3 py-1 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 text-sm transition">IMG</button>
+                </div>
+            </div>
+            <div id="total-spending" class="p-4 bg-gray-100 rounded-xl text-center">
+                <p class="text-gray-600">총 지출 금액</p>
+                <p id="totalAmount" class="text-2xl font-bold text-gray-800">₩ 0</p>
+            </div>
+            <div>
+                <h3 class="font-bold mb-3 text-lg">💸 개인별 정산 현황</h3>
+                <div id="summaryList" class="space-y-2"></div>
+            </div>
+            <div class="border-t pt-4">
+                <h3 class="font-bold mb-3 text-lg">✅ 정산 방법</h3>
+                <div id="transactionList" class="space-y-3"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="app.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // URL에서 settlement ID를 가져와서 데이터를 로드합니다.
+        const urlParams = new URLSearchParams(window.location.search);
+        const settlementId = urlParams.get('id');
+        if (settlementId) {
+            loadSettlement(parseInt(settlementId, 10));
+        } else {
+            // ID가 없으면 홈페이지로 리다이렉트하거나 에러 메시지를 표시할 수 있습니다.
+            alert("잘못된 접근입니다. 홈으로 이동합니다.");
+            window.location.href = 'index.html';
+        }
+    });
+</script>
+</body>
+</html>
