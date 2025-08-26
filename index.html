@@ -3,61 +3,159 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>N빵 정산기</title>
+    <title>엔빵 정산기 | 똑똑한 사람들의 새로운 정산 문화</title>
     <link rel="icon" href="./favicon.ico">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#3b82f6"/>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K907YSEKW3"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-
-        gtag('config', 'G-K907YSEKW3');
-    </script>
-
+    <meta name="theme-color" content="#475569"/> <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .hidden { display: none; }
-        .tooltip-container { position: relative; display: inline-flex; align-items: center; }
-        .tooltip-icon { cursor: pointer; margin-left: 8px; font-weight: bold; color: #9ca3af; border: 1px solid #d1d5db; border-radius: 9999px; width: 20px; height: 20px; display: inline-flex; justify-content: center; align-items: center; font-size: 12px; }
-        .tooltip-text { visibility: hidden; width: 200px; background-color: #374151; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 12px; font-weight: normal;}
-        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'IBM Plex Sans KR', sans-serif; }
+        .hero-bg {
+            background-color: #f8fafc; /* bg-slate-50 */
+        }
+        .text-gradient {
+            background: linear-gradient(90deg, #334155 0%, #0f172a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
-
 </head>
-<body class="bg-gray-50">
+<body class="bg-slate-50 text-slate-800">
 
-<div id="start-screen">
-    <header class="bg-white shadow-sm">
-        <div class="max-w-4xl mx-auto p-4 flex justify-center items-center">
-            <h1 class="text-xl font-bold">🚀 N빵 정산기</h1>
+<header class="bg-white/90 backdrop-blur-lg fixed top-0 left-0 right-0 z-50 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center h-16">
+            <a href="#" class="text-xl font-bold text-slate-900">🚀 엔빵 정산기</a>
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="how-to-use.html" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition">사용 방법</a>
+                <a href="faq.html" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition">FAQ</a>
+                <a href="history.html" class="px-4 py-2 text-sm font-semibold bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300 transition">내역보기</a>
+            </nav>
+            <button id="mobile-menu-btn" class="md:hidden">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
         </div>
-    </header>
-    <main class="max-w-4xl mx-auto p-4 mt-6">
-        <div class="bg-white p-6 rounded-2xl shadow-md text-center">
-            <p class="text-gray-600 mb-8">여행, 회식, 모임 후 복잡한 정산,<br class="sm:hidden"/> 이제 쉽고 빠르게 해결하세요!</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button id="new-settlement-btn" class="w-full px-4 py-4 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition text-lg">📝 새로운 정산</button>
-                <a href="history.html" class="block w-full px-4 py-4 bg-gray-700 text-white font-bold rounded-xl hover:bg-gray-800 transition text-lg text-center">🗂️ 히스토리</a>
-                <a href="./how-to-use.html" class="block w-full px-4 py-4 bg-gray-200 text-gray-800 font-bold rounded-xl hover:bg-gray-300 transition text-lg">⚙️ 사용 방법</a>
-                <a href="./faq.html" class="block w-full px-4 py-4 bg-gray-200 text-gray-800 font-bold rounded-xl hover:bg-gray-300 transition text-lg">🤔 FAQ</a>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+        <a href="how-to-use.html" class="block py-2 px-4 text-sm hover:bg-slate-50">사용 방법</a>
+        <a href="faq.html" class="block py-2 px-4 text-sm hover:bg-slate-50">FAQ</a>
+        <a href="history.html" class="block py-2 px-4 text-sm hover:bg-slate-50">내역보기</a>
+    </div>
+</header>
+
+<main>
+    <section class="hero-bg pt-32 pb-20">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold tracking-tight text-gradient">
+                정산 때문에<br>머리 아팠던 순간은 이제 끝.
+            </h1>
+            <p class="mt-6 text-lg md:text-xl max-w-2xl mx-auto text-slate-600">
+                누가 얼마를 냈고, 누구에게 보내야 할지 더는 헷갈리지 마세요.
+                엔빵 정산기가 알아서 계산해 드립니다.
+            </p>
+            <button id="new-settlement-btn" class="mt-10 px-10 py-4 bg-teal-500 text-white font-bold text-lg rounded-xl hover:bg-teal-600 transition shadow-lg shadow-teal-500/20 transform hover:scale-105">
+                지금 바로 정산 시작하기
+            </button>
+        </div>
+    </section>
+
+    <section class="py-24 bg-white">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-slate-900">단 3단계면 정산이 끝납니다</h2>
+                <p class="mt-4 text-slate-600">복잡한 과정 없이, 누구나 직관적으로 사용할 수 있습니다.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-12 text-center">
+                <div>
+                    <div class="flex items-center justify-center h-16 w-16 bg-slate-100 rounded-xl mx-auto mb-6"><span class="text-2xl font-bold text-slate-600">1</span></div>
+                    <h3 class="text-xl font-semibold text-slate-900">참여자 추가</h3>
+                    <p class="mt-2 text-slate-500">정산할 사람들의<br>이름을 모두 추가하세요.</p>
+                </div>
+                <div>
+                    <div class="flex items-center justify-center h-16 w-16 bg-slate-100 rounded-xl mx-auto mb-6"><span class="text-2xl font-bold text-slate-600">2</span></div>
+                    <h3 class="text-xl font-semibold text-slate-900">지출 내역 입력</h3>
+                    <p class="mt-2 text-slate-500">누가 얼마를 결제했는지<br>영수증을 보며 입력하세요.</p>
+                </div>
+                <div>
+                    <div class="flex items-center justify-center h-16 w-16 bg-slate-100 rounded-xl mx-auto mb-6"><span class="text-2xl font-bold text-slate-600">3</span></div>
+                    <h3 class="text-xl font-semibold text-slate-900">결과 확인 및 공유</h3>
+                    <p class="mt-2 text-slate-500">계산된 결과를 확인하고<br>이미지로 깔끔하게 공유하세요.</p>
+                </div>
             </div>
         </div>
-    </main>
-</div>
+    </section>
 
-<footer class="text-center py-4 text-sm text-gray-500">
-    <p>&copy; 2025 nbbangs.com All rights reserved.</p>
-    <p class="mt-1"><a href="./privacy.html" class="hover:underline">개인정보처리방침</a></p>
+    <section class="py-24 bg-slate-800 text-white">
+        <div class="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-16 items-center">
+            <div class="space-y-12">
+                <div class="flex items-start gap-5">
+                    <div class="flex-shrink-0 w-8 h-8 mt-1 text-teal-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold">정확한 계산</h3>
+                        <p class="mt-2 text-slate-400">1원 단위까지 틀리지 않는 정확성. 이제 복잡한 돈 계산은 엔빵 정산기에게 맡기세요.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-5">
+                    <div class="flex-shrink-0 w-8 h-8 mt-1 text-teal-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.311a15.045 15.045 0 01-4.5 0m3.75-2.311a15.045 15.045 0 014.5 0m-4.5-2.311a12.06 12.06 0 014.5 0m-4.5 2.311a15.045 15.045 0 014.5 0m-4.5 2.311a12.06 12.06 0 01-4.5 0" /></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold">강력한 수동 분할</h3>
+                        <p class="mt-2 text-slate-400">술을 마신 사람과 안 마신 사람, 늦게 온 친구까지. 똑같이 나누기 애매한 상황도 문제없습니다.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-5">
+                    <div class="flex-shrink-0 w-8 h-8 mt-1 text-teal-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold">데이터는 당신의 브라우저에만</h3>
+                        <p class="mt-2 text-slate-400">민감한 금융 정보가 서버에 저장될까 걱정하지 마세요. 모든 데이터는 당신의 기기에만 안전하게 보관됩니다.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-center">
+                <img src="https://i.ibb.co/PNWkP0K/feature2.png" alt="Sharing results feature" class="rounded-lg shadow-2xl shadow-slate-900/40">
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 bg-white">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-4xl font-bold text-slate-900">이제, 정산을 즐거운 경험으로</h2>
+            <p class="mt-4 text-slate-600 max-w-xl mx-auto">
+                돈 문제로 친구와 어색해지는 경험은 이제 그만. 엔빵 정산기로 깔끔하고 투명하게 마무리하세요.
+            </p>
+            <button id="new-settlement-btn-bottom" class="mt-10 px-10 py-4 bg-teal-500 text-white font-bold text-lg rounded-xl hover:bg-teal-600 transition shadow-lg shadow-teal-500/20 transform hover:scale-105">
+                완전히 무료로 시작하기
+            </button>
+        </div>
+    </section>
+</main>
+
+<footer class="bg-slate-100 border-t">
+    <div class="max-w-6xl mx-auto px-4 py-10">
+        <div class="flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
+            <p>&copy; 2025 nbbangs.com. All rights reserved.</p>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="privacy.html" class="hover:text-slate-800">개인정보처리방침</a>
+                <a href="mailto:nbbangs.cs@gmail.com" class="hover:text-slate-800">문의하기</a>
+            </div>
+        </div>
+    </div>
 </footer>
 
 <script src="app.js"></script>
 <script>
-    // '새로운 정산' 버튼 클릭 이벤트 처리
-    document.getElementById('new-settlement-btn').addEventListener('click', () => {
-        createNewSettlement();
+    document.getElementById('new-settlement-btn').addEventListener('click', createNewSettlement);
+    document.getElementById('new-settlement-btn-bottom').addEventListener('click', createNewSettlement);
+    document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
     });
 </script>
 
