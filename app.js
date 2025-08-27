@@ -542,7 +542,7 @@
     const checkPageBreak = (requiredHeight) => { if (currentY + requiredHeight > pageHeight - margin - 10) { doc.addPage(); currentY = margin; return true; } return false; };
     const addElementToPDF = async (element) => {
     if (!element || element.offsetHeight === 0) return;
-    const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', logging: false });
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
     const imgData = canvas.toDataURL('image/png');
     const imgHeight = (canvas.height * pdfWidth) / canvas.width;
     const maxHeight = pageHeight - margin * 2;
@@ -595,27 +595,33 @@
 }
 
     // 👇 여기에 새로운 함수를 추가하세요!
+    // 👇 app.js 파일에서 이 함수를 찾아 아래 코드로 교체하세요.
     async function exportImage() {
-    const settleTitle = document.getElementById('settlement-title').innerText || '정산';
+        const settleTitle = document.getElementById('settlement-title').innerText || '정산';
+        const exportBtn = document.querySelector('button[onclick="exportImage()"]');
 
-    const now = new Date();
-    const dateString = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+        // 이미 공유 작업이 진행 중이면 함수를 즉시 종료
+        if (exportBtn.disabled) {
+            console.log("공유 작업이 이미 진행 중입니다.");
+            return;
+        }
 
-    const balances = getBalances();
-    const transactions = calculateTransactions(balances);
+        const originalText = exportBtn.innerText;
+        exportBtn.innerText = '생성 중..';
+        exportBtn.disabled = true; // 버튼 비활성화
 
-    // 1. 이미지를 생성하기 위한 임시 컨테이너를 만듭니다.
-    const container = document.createElement('div');
+        const container = document.createElement('div');
+        container.style.cssText = `position: absolute; top: 0; left: -9999px; width: 600px; background-color: #f9fafb; padding: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;`;
 
-    // [수정된 부분] opacity: 0 대신 left: -9999px 로 요소를 화면 밖으로 이동시킵니다.
-    container.style.cssText = `position: absolute; top: 0; left: -9999px; width: 600px; background-color: #f9fafb; padding: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;`;
+        // ... (기존 htmlContent 생성 코드는 그대로 둡니다) ...
 
-    let finalSettlementHtml = '';
-    if (transactions.length === 0) {
-    finalSettlementHtml = `<div style="text-align: center; color: #16a34a; font-weight: 600; padding: 1rem; background-color: #f0fdf4; border-radius: 0.75rem;">모든 정산이 완료되었습니다! 🎉</div>`;
-} else {
-    transactions.forEach(({ from, to, amount }) => {
-    finalSettlementHtml += `
+        let finalSettlementHtml = '';
+        const transactions = calculateTransactions(getBalances());
+        if (transactions.length === 0) {
+            finalSettlementHtml = `<div style="text-align: center; color: #16a34a; font-weight: 600; padding: 1rem; background-color: #f0fdf4; border-radius: 0.75rem;">모든 정산이 완료되었습니다! 🎉</div>`;
+        } else {
+            transactions.forEach(({ from, to, amount }) => {
+                finalSettlementHtml += `
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background-color: #f9fafb; border-radius: 0.75rem; margin-bottom: 0.75rem;">
           <span style="font-weight: 700; color: #dc2626;">${from}</span>
           <svg xmlns="http://www.w3.org/2000/svg" style="height: 1.25rem; width: 1.25rem; color: #6b7280; flex-shrink: 0;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
@@ -623,13 +629,15 @@
           <span style="font-weight: 600; color: #1f2937; background-color: #e5e7eb; padding: 0.25rem 0.75rem; border-radius: 9999px; white-space: nowrap;">${amount.toLocaleString()}원</span>
         </div>
       `;
-});
-}
+            });
+        }
 
-    let htmlContent = `
+        // ... (기존 htmlContent 생성 코드) ...
+        const people = getSettlements().find(s => s.id === currentSettlementId)?.people || [];
+        let htmlContent = `
     <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 25px;">
       <h1 style="text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 8px;">${settleTitle} 내역서</h1>
-      <p style="text-align: center; font-size: 14px; color: #6b7280; margin-bottom: 25px;">${dateString} 기준</p>
+      <p style="text-align: center; font-size: 14px; color: #6b7280; margin-bottom: 25px;">${new Date().toLocaleDateString('ko-KR')} 기준</p>
 
       <div style="border-top: 2px dashed #e5e7eb; padding-top: 20px;">
         <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">📈 지출 요약</h2>
@@ -647,17 +655,17 @@
         <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 15px;">📋 상세 지출 내역</h2>
         <div style="font-size: 15px; line-height: 1.8;">`;
 
-    expenses.forEach(exp => {
-    htmlContent += `<div style="padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
+        expenses.forEach(exp => {
+            htmlContent += `<div style="padding: 10px 0; border-bottom: 1px solid #f3f4f6;">
                     <div style="display: flex; justify-content: space-between; font-weight: 600;">
                       <span>${exp.title}</span>
                       <span style="white-space: nowrap; padding-left: 10px;">${exp.amount.toLocaleString()}원</span>
                     </div>
                     <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">결제: ${exp.paidBy}</div>
                   </div>`;
-});
+        });
 
-    htmlContent += `</div></div>
+        htmlContent += `</div></div>
       <div style="border-top: 2px dashed #e5e7eb; padding-top: 20px; margin-top: 25px;">
         <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 15px;">✅ 최종 정산</h2>
         ${finalSettlementHtml}
@@ -665,41 +673,53 @@
     </div>
   `;
 
-    container.innerHTML = htmlContent;
-    document.body.appendChild(container);
+        container.innerHTML = htmlContent;
+        document.body.appendChild(container);
 
-    try {
-    const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+        try {
+            const canvas = await html2canvas(container, { scale: 2, useCORS: true });
 
-    // 모바일 공유 기능을 위한 로직 추가
-    if (navigator.canShare && navigator.share) {
-    canvas.toBlob(async (blob) => {
-    const file = new File([blob], `${settleTitle}_정산내역.jpg`, { type: 'image/jpeg' });
-    try {
-    await navigator.share({
-    files: [file],
-    title: `${settleTitle} 정산 내역`,
-    text: '정산 내역을 확인하세요!',
-});
-} catch (err) {
-    console.error("공유 기능 오류:", err);
-}
-}, 'image/jpeg');
-} else {
-    // 기존의 다운로드 방식 (데스크톱 등 공유 기능 미지원 환경)
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/jpeg', 0.95);
-    a.download = `${settleTitle}_정산내역.jpg`;
-    a.click();
-}
-} catch (error) {
-    console.error("이미지 생성 오류:", error);
-    alert("이미지 생성 중 오류가 발생했습니다.");
-} finally {
-    document.body.removeChild(container);
-}
-
-}
+            if (navigator.canShare && navigator.share) {
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `${settleTitle}_정산내역.jpg`, { type: 'image/jpeg' });
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: `${settleTitle} 정산 내역`,
+                            text: '정산 내역을 확인하세요!',
+                        });
+                    } catch (err) {
+                        // 사용자가 공유를 취소한 경우(AbortError)는 오류로 간주하지 않음
+                        if (err.name !== 'AbortError') {
+                            console.error("공유 기능 오류:", err);
+                        }
+                    } finally {
+                        // 공유 작업이 끝나면 (성공, 실패, 취소 모두) 버튼을 다시 활성화
+                        exportBtn.innerText = originalText;
+                        exportBtn.disabled = false;
+                    }
+                }, 'image/jpeg');
+            } else {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/jpeg', 0.95);
+                a.download = `${settleTitle}_정산내역.jpg`;
+                a.click();
+                // 다운로드 방식에서는 바로 버튼 상태를 복구
+                exportBtn.innerText = originalText;
+                exportBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error("이미지 생성 오류:", error);
+            alert("이미지 생성 중 오류가 발생했습니다.");
+            // 오류 발생 시에도 버튼 상태를 복구
+            exportBtn.innerText = originalText;
+            exportBtn.disabled = false;
+        } finally {
+            if (document.body.contains(container)) {
+                document.body.removeChild(container);
+            }
+        }
+    }
 
     document.getElementById("personName").addEventListener("keypress", e => { if (e.key === "Enter") { e.preventDefault(); addPerson(); } });
     document.getElementById("expenseAmount").addEventListener("input", () => {
